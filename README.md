@@ -13,8 +13,8 @@ This framework supports Solana v1.9 and Anchor v0.24.2 **OR** Solana v1.10 and A
 
 1. add one of the following in your `Cargo.toml`:
  
-    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/lowprivuser/solana-test-framework"}`
-    - Solana ~1.10: `solana-test-framework = { git = "https://github.com/lowprivuser/solana-test-framework", branch = "solana1.10" }`
+    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework"}`
+    - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.10" }`
 
 2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
 
