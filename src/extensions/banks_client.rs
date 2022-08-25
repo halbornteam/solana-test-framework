@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use borsh::BorshDeserialize;
+use futures::{Future, FutureExt};
 use solana_program::{
     bpf_loader_upgradeable,
     program_pack::Pack
@@ -17,15 +18,12 @@ use solana_sdk::{
     transport,
 };
 use spl_associated_token_account::{
-    create_associated_token_account,
-    get_associated_token_address
+    get_associated_token_address, instruction::create_associated_token_account as create_associated_token_account_ix,
 };
-use futures::{Future, FutureExt};
 use std::pin::Pin;
 
 #[cfg(feature = "anchor")]
 use anchor_lang::AccountDeserialize;
-
 
 pub use solana_banks_client::{BanksClient, BanksClientError};
 
@@ -277,8 +275,15 @@ impl BanksClientExtensions for BanksClient {
         payer: &Keypair,
     ) -> transport::Result<Pubkey> {
         let latest_blockhash = self.get_latest_blockhash().await?;
-        let associated_token_account = get_associated_token_address(account, mint);
-        let ix = create_associated_token_account(&payer.pubkey(), &account, &mint);
+        let associated_token_account = get_associated_token_address(
+            account,
+            mint
+        );
+        let ix = create_associated_token_account_ix(
+        &payer.pubkey(),
+        &account,
+        &mint,
+        );
 
         self.process_transaction(Transaction::new_signed_with_payer(
             &[ix],
@@ -326,22 +331,16 @@ impl BanksClientExtensions for BanksClient {
             loader_instruction::write(&program_keypair.pubkey(), &bpf_loader::id(), offset, bytes)
         };
 
-        let chunk_size = util::calculate_chunk_size(
-            &deploy_ix,
-            &vec![payer, program_keypair],
-        );
+        let chunk_size = util::calculate_chunk_size(&deploy_ix, &vec![payer, program_keypair]);
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
             // let message = Message::new(&[ix], Some(&payer.pubkey()));
             // let tx = Transaction::new(&[payer, program_keypair], message, latest_blockhash);
-            let tx = self.transaction_from_instructions(
-                &[ix],
-                &payer,
-                vec![
-                    &payer
-                ]
-            ).await.unwrap();
+            let tx = self
+                .transaction_from_instructions(&[ix], &payer, vec![&payer, &program_keypair])
+                .await
+                .unwrap();
 
             self.process_transaction(tx).await?;
         }
@@ -391,14 +390,14 @@ impl BanksClientExtensions for BanksClient {
         )
         .expect("Cannot create buffer");
 
-        let mut tx = self.transaction_from_instructions(
-            create_buffer_ix.as_ref(),
-            &payer,
-            vec![
+        let mut tx = self
+            .transaction_from_instructions(
+                create_buffer_ix.as_ref(),
                 &payer,
-                &buffer_keypair
-            ]
-        ).await.unwrap();
+                vec![&payer, &buffer_keypair],
+            )
+            .await
+            .unwrap();
 
         self.process_transaction(tx).await?;
 
@@ -412,41 +411,42 @@ impl BanksClientExtensions for BanksClient {
             )
         };
 
-        let chunk_size = util::calculate_chunk_size(
-            &deploy_ix,
-            &vec![payer, buffer_authority_signer]
-        );
+        let chunk_size =
+            util::calculate_chunk_size(&deploy_ix, &vec![payer, buffer_authority_signer]);
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
 
-            tx = self.transaction_from_instructions(
-                &[ix],
-                &payer,
-                vec![&payer, &buffer_authority_signer]
-            ).await.unwrap();
+            tx = self
+                .transaction_from_instructions(
+                    &[ix],
+                    &payer,
+                    vec![&payer, &buffer_authority_signer],
+                )
+                .await
+                .unwrap();
 
             self.process_transaction(tx).await?;
         }
 
         // 3. Finalize
-        tx = self.transaction_from_instructions(
-            bpf_loader_upgradeable::deploy_with_max_program_len(
-                &payer.pubkey(),
-                &program_keypair.pubkey(),
-                &buffer_keypair.pubkey(),
-                &buffer_authority_signer.pubkey(),
-                minimum_balance,
-                program_len,
-            )
-            .expect("Cannot parse deploy instruction").as_ref(),
-            &payer,
-            vec![
+        tx = self
+            .transaction_from_instructions(
+                bpf_loader_upgradeable::deploy_with_max_program_len(
+                    &payer.pubkey(),
+                    &program_keypair.pubkey(),
+                    &buffer_keypair.pubkey(),
+                    &buffer_authority_signer.pubkey(),
+                    minimum_balance,
+                    program_len,
+                )
+                .expect("Cannot parse deploy instruction")
+                .as_ref(),
                 &payer,
-                &program_keypair,
-                &buffer_authority_signer
-            ]
-        ).await.unwrap();
+                vec![&payer, &program_keypair, &buffer_authority_signer],
+            )
+            .await
+            .unwrap();
         self.process_transaction(tx).await?;
 
         return Ok(());

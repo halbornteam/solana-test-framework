@@ -1,8 +1,13 @@
 use solana_program::{
     program_option::COption,
-    program_pack::Pack
+    program_pack::Pack,
+    bpf_loader_upgradeable::{
+        UpgradeableLoaderState,
+        self
+    }
 };
 use solana_program_test::ProgramTest;
+use solana_program_runtime::invoke_context::ProcessInstructionWithContext;
 use solana_sdk::{
     account::Account,
     native_token::sol_to_lamports,
@@ -12,6 +17,12 @@ use solana_sdk::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use borsh::BorshSerialize;
+use log::info;
+use chrono_humanize::{
+    Accuracy,
+    HumanTime,
+    Tense
+};
 
 #[cfg(feature = "anchor")]
 use anchor_lang::{AnchorSerialize, Discriminator};
@@ -89,8 +100,8 @@ pub trait ProgramTestExtension {
         close_authority: Option<Pubkey>
     );
     
-    // Adds an associated token account to the test environment.
-    // Returns the address of the created account.
+    /// Adds an associated token account to the test environment.
+    /// Returns the address of the created account.
     fn add_associated_token_account(
         &mut self,
         mint: Pubkey,
@@ -101,6 +112,16 @@ pub trait ProgramTestExtension {
         delegated_amount: u64,
         close_authority: Option<Pubkey>
     ) -> Pubkey;
+
+    /// Adds a BPF program to the test environment.
+    /// The program is upgradeable if `Some` `program_authority` is provided.
+    fn add_bpf_program(
+        &mut self,
+        program_name: &str,
+        program_id: Pubkey,
+        program_authority: Option<Pubkey>,
+        process_instruction: Option<ProcessInstructionWithContext>
+    );
 }
 
 impl ProgramTestExtension for ProgramTest {
@@ -262,5 +283,79 @@ impl ProgramTestExtension for ProgramTest {
         );
 
         pubkey
+    }
+
+    fn add_bpf_program(
+        &mut self,
+        program_name: &str,
+        program_id: Pubkey,
+        program_authority: Option<Pubkey>,
+        process_instruction: Option<ProcessInstructionWithContext>
+    ) {        
+        if let Some(program_authority) = program_authority {
+            let program_file = solana_program_test::find_file(&format!("{}.so", program_name)).unwrap();
+            let program_bytes = solana_program_test::read_file(program_file.clone());
+            
+            let program_data_pubkey = Pubkey::new_unique();
+            
+            let mut program = Vec::<u8>::new();
+            bincode::serialize_into(
+                &mut program,
+                &UpgradeableLoaderState::Program { 
+                    programdata_address: program_data_pubkey
+                }
+            ).unwrap();
+            
+            let mut program_data = Vec::<u8>::new();
+            bincode::serialize_into(
+                &mut program_data,
+                &UpgradeableLoaderState::ProgramData {
+                    slot: 0,
+                    upgrade_authority_address: Some(program_authority)
+                }
+            ).unwrap();
+
+            info!(
+                "\"{}\" BPF program from {}{}",
+                program_name,
+                program_file.display(),
+                std::fs::metadata(&program_file)
+                    .map(|metadata| {
+                        metadata
+                            .modified()
+                            .map(|time| {
+                                format!(
+                                    ", modified {}",
+                                    HumanTime::from(time)
+                                        .to_text_en(Accuracy::Precise, Tense::Past)
+                                )
+                            })
+                            .ok()
+                    })
+                    .ok()
+                    .flatten()
+                    .unwrap_or_else(|| "".to_string())
+            );
+
+            self.add_account_with_data(
+                program_id,
+                bpf_loader_upgradeable::id(),
+                program.as_ref(),
+                true
+            );
+
+            self.add_account_with_data(
+                program_data_pubkey,
+                bpf_loader_upgradeable::id(),
+                &[program_data.as_slice(), program_bytes.as_slice()].concat(),
+                false
+            );
+        } else {
+            self.add_program(
+                &program_name,
+                program_id,
+                process_instruction
+            );
+        }
     }
 }

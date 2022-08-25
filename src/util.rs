@@ -32,6 +32,6 @@ pub fn calculate_chunk_size<F: Fn(u32, Vec<u8>) -> Instruction>(
     
     // add 1 byte buffer to account for shortvec encoding
     let chunk_size = PACKET_DATA_SIZE.saturating_sub(tx_size).saturating_sub(1);
-    
+
     return chunk_size;
 }

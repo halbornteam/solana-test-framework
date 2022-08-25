@@ -1,5 +1,5 @@
 mod extensions;
-mod util;
+pub mod util;
 
 pub use extensions::*;
 pub use solana_program_test::tokio;

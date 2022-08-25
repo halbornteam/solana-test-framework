@@ -251,6 +251,21 @@ fn add_associated_token_account(
 
 &nbsp;
 
+Add a BPF program to the test environment.
+The program is upgradeable if `Some` `program_authority` is provided.
+
+```rust
+fn add_bpf_program(
+    &mut self,
+    program_name: &str,
+    program_id: Pubkey,
+    program_authority: Option<Pubkey>,
+    process_instruction: Option<ProcessInstructionWithContext>
+)
+```
+
+&nbsp;
+
 ### [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
 
 Advance the internal clock to the provided timestamp.
