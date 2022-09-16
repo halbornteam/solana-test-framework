@@ -1,6 +1,6 @@
 [package]
 name = "solana-test-framework"
-version = "1.0.4"
+version = "1.1.0"
 edition = "2021"
 authors = ["lowprivuser"]
 
@@ -15,6 +15,7 @@ solana-sdk = "1.10"
 solana-program = "1.10"
 solana-banks-client = "1.10"
 solana-program-runtime = "1.10"
+solana-client = "1.10"
 spl-token = "3.3.0"
 spl-associated-token-account = "~1.0.5"
 anchor-lang = { version = "0.25.0", optional = true }
@@ -27,3 +28,4 @@ chrono-humanize = "0.2"
 
 [dev-dependencies]
 program-for-tests = {path="tests/artifacts/program_for_tests"}
+solana-test-validator = "1.10"
