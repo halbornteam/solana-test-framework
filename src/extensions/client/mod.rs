@@ -106,6 +106,7 @@ pub trait ClientExtensions {
         _authority: &Pubkey,
         _mint: &Pubkey,
         _payer: &Keypair,
+        _token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
         unimplemented!();
     }

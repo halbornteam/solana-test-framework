@@ -228,13 +228,14 @@ async fn create_associated_token_account() {
     let (mut program, _) = helpers::add_program();
     let payer = helpers::add_payer(&mut program);
     let mint_pubkey = Pubkey::new_unique();
+    let token_program_id = spl_token::ID; //could also use token-2022 ID
     //Create mint with defaults
     program.add_token_mint(mint_pubkey, None, 10, 0, None);
 
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
 
     let token_account = banks_client
-        .create_associated_token_account(&payer.pubkey(), &mint_pubkey, &payer)
+        .create_associated_token_account(&payer.pubkey(), &mint_pubkey, &payer, &token_program_id)
         .await
         .unwrap();
 
