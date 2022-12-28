@@ -14,4 +14,4 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = { version = "0.25.0" }
+anchor-lang = { version = "0.26.0" }

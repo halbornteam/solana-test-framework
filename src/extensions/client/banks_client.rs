@@ -142,6 +142,7 @@ impl ClientExtensions for BanksClient {
         account: &Pubkey,
         mint: &Pubkey,
         payer: &Keypair,
+        token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash().await?;
         let associated_token_account = get_associated_token_address(
@@ -152,6 +153,7 @@ impl ClientExtensions for BanksClient {
         &payer.pubkey(),
         &account,
         &mint,
+        &token_program_id
         );
 
         self.process_transaction(Transaction::new_signed_with_payer(

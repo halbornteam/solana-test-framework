@@ -1,6 +1,6 @@
 [package]
 name = "solana-test-framework"
-version = "1.1.0"
+version = "1.14"
 edition = "2021"
 authors = ["lowprivuser"]
 
@@ -10,15 +10,15 @@ authors = ["lowprivuser"]
 anchor = ["anchor-lang"]
 
 [dependencies]
-solana-program-test = "1.10"
-solana-sdk = "1.10"
-solana-program = "1.10"
-solana-banks-client = "1.10"
-solana-program-runtime = "1.10"
-solana-client = "1.10"
-spl-token = "3.3.0"
-spl-associated-token-account = "~1.0.5"
-anchor-lang = { version = "0.25.0", optional = true }
+solana-program-test = "1.14"
+solana-sdk = "1.14"
+solana-program ="1.14"
+solana-banks-client = "1.14"
+solana-program-runtime = "1.14"
+solana-client = "1.14"
+spl-token = "3.5.0"
+spl-associated-token-account = "1.1.2"
+anchor-lang = { version = "0.26.0", optional = true }
 async-trait = "0.1.52"
 futures = "0.3"
 borsh = "0.9"
@@ -28,4 +28,4 @@ chrono-humanize = "0.2"
 
 [dev-dependencies]
 program-for-tests = {path="tests/artifacts/program_for_tests"}
-solana-test-validator = "1.10"
+solana-test-validator = "1.14"

@@ -136,6 +136,7 @@ impl ClientExtensions for RpcClient {
         account: &Pubkey,
         mint: &Pubkey,
         payer: &Keypair,
+        token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {    
         let associated_token_account = get_associated_token_address(
             account,
@@ -148,6 +149,7 @@ impl ClientExtensions for RpcClient {
                     &payer.pubkey(),
                     &account,
                     &mint,
+                    &token_program_id,
                 )
             ],
             payer,

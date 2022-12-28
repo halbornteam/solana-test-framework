@@ -211,6 +211,7 @@ async fn create_associated_token_account() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
+    let token_program_id = spl_token::ID; //could also use token-2022 ID
 
     genesis_config.add_programs_with_path(
         &[
@@ -242,7 +243,7 @@ async fn create_associated_token_account() {
         .unwrap();
 
     let token_account = rpc_client
-        .create_associated_token_account(&payer.pubkey(), &mint.pubkey(), &payer)
+        .create_associated_token_account(&payer.pubkey(), &mint.pubkey(), &payer, &token_program_id)
         .await
         .unwrap();
 

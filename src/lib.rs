@@ -10,12 +10,10 @@ macro_rules! processor {
     ($process_instruction:expr) => {
         Some(
             |first_instruction_account: usize,
-             input: &[u8],
-             invoke_context: &mut InvokeContext| {
-                builtin_process_instruction(
+             invoke_context: &mut solana_program_test::InvokeContext| {
+                $crate::builtin_process_instruction(
                     $process_instruction,
                     first_instruction_account,
-                    input,
                     invoke_context,
                 )
             },
