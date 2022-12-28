@@ -19,6 +19,8 @@ To use it in your project,
     - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.10" }`
     - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.14" }`
 
+2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
+
 &nbsp;
 
 ## Docs
