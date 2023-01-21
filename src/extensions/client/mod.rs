@@ -32,6 +32,9 @@ pub use rpc_client::*;
 
 use crate::util;
 
+#[cfg(feature = "pyth")]
+use pyth_sdk_solana::state::PriceAccount;
+
 /// Convenience functions for clients
 #[async_trait]
 pub trait ClientExtensions {
@@ -62,6 +65,15 @@ pub trait ClientExtensions {
         &mut self,
         _address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
+        unimplemented!();
+    }
+
+
+    #[cfg(feature = "pyth")]
+    async fn get_pyth_price_account(
+        &mut self,
+        _address: Pubkey,
+    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
         unimplemented!();
     }
 

@@ -1,5 +1,8 @@
 use super::*;
 
+#[cfg(feature = "pyth")]
+use pyth_sdk_solana::state::PriceAccount;
+
 #[async_trait]
 impl ClientExtensions for BanksClient {
     async fn transaction_from_instructions(
@@ -37,6 +40,18 @@ impl ClientExtensions for BanksClient {
             let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
             T::deserialize(&mut account.data.as_ref()).map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
         }).await.map_err(Into::into)
+    }
+    
+    #[cfg(feature = "pyth")]
+    async fn get_pyth_price_account(
+        &mut self,
+        address: Pubkey,
+    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
+        let account = self.get_account(address).await?.unwrap();
+
+        let price_account = pyth_sdk_solana::state::load_price_account(&account.data.as_ref())
+            .map_err(|_| BanksClientError::ClientError("Failed to deserialize price account"))?;
+        return Ok(price_account.clone())
     }
 
     async fn create_account(

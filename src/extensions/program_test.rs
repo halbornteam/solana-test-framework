@@ -27,6 +27,12 @@ use chrono_humanize::{
 #[cfg(feature = "anchor")]
 use anchor_lang::{AnchorSerialize, Discriminator};
 
+#[cfg(feature = "pyth")]
+use {
+    pyth_sdk_solana::state::PriceAccount,
+    crate::util::{PriceAccountWrapper},
+};
+
 pub trait ProgramTestExtension {
     /// Adds a requested number of account with initial balance of 1_000 SOL to the test environment
     fn generate_accounts(
@@ -122,6 +128,16 @@ pub trait ProgramTestExtension {
         program_authority: Option<Pubkey>,
         process_instruction: Option<ProcessInstructionWithContext>
     );
+
+    #[cfg(feature = "pyth")]
+    /// Adds a Pyth oracle to the test environment.
+    fn add_pyth_oracle(
+        &mut self,
+        oracle: Pubkey,
+        program_id: Pubkey,
+        data: PriceAccount,
+    );
+
 }
 
 impl ProgramTestExtension for ProgramTest {
@@ -357,5 +373,17 @@ impl ProgramTestExtension for ProgramTest {
                 process_instruction
             );
         }
+    }
+
+    #[cfg(feature = "pyth")]
+    /// Adds a Pyth oracle to the test environment.
+    fn add_pyth_oracle(
+        &mut self,
+        oracle: Pubkey,
+        program_id: Pubkey,
+        data: PriceAccount,
+    ) {
+        let data = bincode::serialize(&PriceAccountWrapper(&data)).unwrap();
+        self.add_account_with_data(oracle, program_id, &data, false);
     }
 }

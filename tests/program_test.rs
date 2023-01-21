@@ -18,6 +18,9 @@ use anchor_lang::{AccountDeserialize, AnchorSerialize, Discriminator};
 #[cfg(feature = "anchor")]
 use std::str::FromStr;
 
+#[cfg(feature = "pyth")]
+use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
+
 mod helpers;
 
 #[tokio::test]
@@ -227,4 +230,42 @@ async fn add_associated_token_account() {
     assert_eq!(associated_token_account_data.amount, amount);
     assert_eq!(associated_token_account_data.mint, mint_pubkey);
     assert_eq!(associated_token_account_data.owner, owner);
+}
+
+#[tokio::test]
+#[cfg(feature = "pyth")]
+async fn add_pyth_price_feed() {
+    let (mut program, program_id) = helpers::add_program();
+
+    let oracle = Pubkey::new_unique();
+    let data = PriceAccount {
+        magic:0xa1b2c3d4 as u32,
+        ver: 2,
+        expo: 5,
+        atype: 3,
+        agg: PriceInfo {
+            price: 10,
+            conf: 20,
+            status: PriceStatus::Trading,
+            pub_slot: 3,
+            ..Default::default()
+        },
+        timestamp: 200,
+        prev_timestamp: 100,
+        prev_price: 60,
+        prev_conf: 70,
+        prev_slot: 1,
+        ..Default::default()
+    };
+
+    //add the pyth oracle to the context
+    program.add_pyth_oracle(oracle, program_id, data);
+    
+    let (mut banks_client, _, _) = program.start().await;
+
+    //get pyth price account data from chain
+    let price_data = banks_client.get_pyth_price_account(oracle).await.unwrap();
+
+    assert_eq!(price_data, data);
+
 }
