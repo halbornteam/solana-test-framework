@@ -1,6 +1,11 @@
 use super::*;
 use solana_client::rpc_client::RpcClient;
 
+#[cfg(feature = "pyth")]
+use {
+    pyth_sdk_solana::state::PriceAccount,
+};
+
 #[async_trait]
 impl ClientExtensions for RpcClient {
     async fn transaction_from_instructions(
@@ -35,6 +40,22 @@ impl ClientExtensions for RpcClient {
     ) -> Result<T, Box<dyn std::error::Error>> {
         self.get_account_data(&address).map(|account_data| {
             T::deserialize(&mut account_data.as_ref()).map_err(Into::into)
+        })?
+    }
+
+    #[cfg(feature = "pyth")]
+    async fn get_pyth_price_account(
+        &mut self,
+        address: Pubkey,
+    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
+        self.get_account_data(&address).map(|account_data| {
+
+            //PriceFeed::deserialize(&mut account_data.as_ref()).map_err(Into::into)
+            let data = account_data.clone();
+            let price_account = pyth_sdk_solana::state::load_price_account(&data)
+                .map_err(|_| BanksClientError::ClientError("Failed to deserialize price account"))?;
+            return Ok(price_account.clone())
+
         })?
     }
 
