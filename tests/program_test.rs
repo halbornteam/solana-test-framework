@@ -238,19 +238,22 @@ async fn add_pyth_price_feed() {
     let (mut program, program_id) = helpers::add_program();
 
     let oracle = Pubkey::new_unique();
-    let data = PriceAccount {
+    let oracle2 = Pubkey::new_unique();
+    let time_stamp: i64 = 200;
+    let price_info = PriceInfo {
+        price: 10,
+        conf: 20,
+        status: PriceStatus::Trading,
+        pub_slot: 3,
+        ..Default::default()
+    };
+    let price_account = PriceAccount {
         magic:0xa1b2c3d4 as u32,
         ver: 2,
         expo: 5,
         atype: 3,
-        agg: PriceInfo {
-            price: 10,
-            conf: 20,
-            status: PriceStatus::Trading,
-            pub_slot: 3,
-            ..Default::default()
-        },
-        timestamp: 200,
+        agg: price_info,
+        timestamp: time_stamp,
         prev_timestamp: 100,
         prev_price: 60,
         prev_conf: 70,
@@ -259,13 +262,16 @@ async fn add_pyth_price_feed() {
     };
 
     //add the pyth oracle to the context
-    program.add_pyth_oracle(oracle, program_id, data);
+    program.add_pyth_oracle(oracle, program_id, Some(price_account), None, None);
+    program.add_pyth_oracle(oracle2, program_id, None, Some(price_info), Some(time_stamp));
     
     let (mut banks_client, _, _) = program.start().await;
 
     //get pyth price account data from chain
     let price_data = banks_client.get_pyth_price_account(oracle).await.unwrap();
+    assert_eq!(price_data, price_account);
 
-    assert_eq!(price_data, data);
+    let price_data = banks_client.get_pyth_price_account(oracle2).await.unwrap();
+    assert_eq!(price_data, price_account);
 
 }

@@ -29,8 +29,9 @@ use anchor_lang::{AnchorSerialize, Discriminator};
 
 #[cfg(feature = "pyth")]
 use {
-    pyth_sdk_solana::state::PriceAccount,
-    crate::util::{PriceAccountWrapper},
+    pyth_sdk_solana::state::{PriceAccount,PriceInfo},
+    crate::util::{PriceAccountDef,PriceAccountWrapper},
+    solana_program_test::BanksClientError
 };
 
 pub trait ProgramTestExtension {
@@ -135,8 +136,10 @@ pub trait ProgramTestExtension {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        data: PriceAccount,
-    );
+        price_account: Option<PriceAccount>,
+        price_info: Option<PriceInfo>,
+        timestamp: Option<i64>,
+    ) -> Result<(), BanksClientError>;
 
 }
 
@@ -381,9 +384,35 @@ impl ProgramTestExtension for ProgramTest {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        data: PriceAccount,
-    ) {
-        let data = bincode::serialize(&PriceAccountWrapper(&data)).unwrap();
+        price_account: Option<PriceAccount>,
+        price_info: Option<PriceInfo>,
+        timestamp: Option<i64>,
+    ) -> Result<(), BanksClientError>{
+        let data = if price_account != None {
+            bincode::serialize(&PriceAccountWrapper(&price_account.unwrap())).unwrap()
+        } else if price_info != None && timestamp != None {
+
+            bincode::serialize(
+                &PriceAccountWrapper(&pyth_sdk_solana::state::PriceAccount {
+                    magic:0xa1b2c3d4 as u32,
+                    ver: 2,
+                    expo: 5,
+                    atype: 3,
+                    agg: price_info.unwrap(),
+                    timestamp: timestamp.unwrap(),
+                    prev_timestamp: 100,
+                    prev_price: 60,
+                    prev_conf: 70,
+                    prev_slot: 1,
+                    ..Default::default()
+                })
+            ).unwrap()
+        } else {
+            return Err(BanksClientError::ClientError("Either provide the price_account or price_info and time_stamp"));
+        };
+
         self.add_account_with_data(oracle, program_id, &data, false);
+
+        return Ok(())
     }
 }
