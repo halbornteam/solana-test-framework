@@ -26,22 +26,30 @@ impl ClientExtensions for BanksClient {
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account(address).map(|result| {
-            let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-            T::try_deserialize(&mut account.data.as_ref()).map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
-        }).await.map_err(Into::into)
+        self.get_account(address)
+            .map(|result| {
+                let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
+                T::try_deserialize(&mut account.data.as_ref())
+                    .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
+            })
+            .await
+            .map_err(Into::into)
     }
 
     async fn get_account_with_borsh<T: BorshDeserialize>(
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account(address).map(|result| {
-            let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-            T::deserialize(&mut account.data.as_ref()).map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
-        }).await.map_err(Into::into)
+        self.get_account(address)
+            .map(|result| {
+                let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
+                T::deserialize(&mut account.data.as_ref())
+                    .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
+            })
+            .await
+            .map_err(Into::into)
     }
-    
+
     #[cfg(feature = "pyth")]
     async fn get_pyth_price_account(
         &mut self,
@@ -49,9 +57,9 @@ impl ClientExtensions for BanksClient {
     ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
         let account = self.get_account(address).await?.unwrap();
 
-        let price_account = pyth_sdk_solana::state::load_price_account(&account.data.as_ref())
+        let price_account = pyth_sdk_solana::state::load_price_account(account.data.as_ref())
             .map_err(|_| BanksClientError::ClientError("Failed to deserialize price account"))?;
-        return Ok(price_account.clone())
+        Ok(*price_account)
     }
 
     async fn create_account(
@@ -86,8 +94,8 @@ impl ClientExtensions for BanksClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash().await?;
         self.process_transaction(system_transaction::create_account(
-            &payer,
-            &mint,
+            payer,
+            mint,
             latest_blockhash,
             Rent::default().minimum_balance(spl_token::state::Mint::get_packed_len()),
             spl_token::state::Mint::get_packed_len() as u64,
@@ -124,8 +132,8 @@ impl ClientExtensions for BanksClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash().await?;
         self.process_transaction(system_transaction::create_account(
-            &payer,
-            &account,
+            payer,
+            account,
             latest_blockhash,
             Rent::default().minimum_balance(spl_token::state::Account::get_packed_len()),
             spl_token::state::Account::get_packed_len() as u64,
@@ -160,16 +168,9 @@ impl ClientExtensions for BanksClient {
         token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash().await?;
-        let associated_token_account = get_associated_token_address(
-            account,
-            mint
-        );
-        let ix = create_associated_token_account_ix(
-        &payer.pubkey(),
-        &account,
-        &mint,
-        &token_program_id
-        );
+        let associated_token_account = get_associated_token_address(account, mint);
+        let ix =
+            create_associated_token_account_ix(&payer.pubkey(), account, mint, token_program_id);
 
         self.process_transaction(Transaction::new_signed_with_payer(
             &[ix],
@@ -202,8 +203,8 @@ impl ClientExtensions for BanksClient {
 
         // 1 Create account
         self.process_transaction(system_transaction::create_account(
-            &payer,
-            &program_keypair,
+            payer,
+            program_keypair,
             latest_blockhash,
             minimum_balance,
             program_len as u64,
@@ -217,12 +218,12 @@ impl ClientExtensions for BanksClient {
             loader_instruction::write(&program_keypair.pubkey(), &bpf_loader::id(), offset, bytes)
         };
 
-        let chunk_size = util::calculate_chunk_size(&deploy_ix, &vec![payer, program_keypair]);
+        let chunk_size = util::calculate_chunk_size(deploy_ix, &vec![payer, program_keypair]);
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
             let tx = self
-                .transaction_from_instructions(&[ix], &payer, vec![&payer, &program_keypair])
+                .transaction_from_instructions(&[ix], payer, vec![payer, program_keypair])
                 .await
                 .unwrap();
 
@@ -230,19 +231,17 @@ impl ClientExtensions for BanksClient {
         }
 
         // 3. Finalize
-        let finalize_tx = self.transaction_from_instructions(
-            &[
-                loader_instruction::finalize(
+        let finalize_tx = self
+            .transaction_from_instructions(
+                &[loader_instruction::finalize(
                     &program_keypair.pubkey(),
                     &bpf_loader::id(),
-                )   
-            ],
-            &payer,
-            vec![
+                )],
                 payer,
-                program_keypair
-            ]
-        ).await.unwrap();
+                vec![payer, program_keypair],
+            )
+            .await
+            .unwrap();
 
         self.process_transaction(finalize_tx).await?;
 
@@ -281,8 +280,8 @@ impl ClientExtensions for BanksClient {
         let mut tx = self
             .transaction_from_instructions(
                 create_buffer_ix.as_ref(),
-                &payer,
-                vec![&payer, &buffer_keypair],
+                payer,
+                vec![payer, buffer_keypair],
             )
             .await
             .unwrap();
@@ -300,17 +299,13 @@ impl ClientExtensions for BanksClient {
         };
 
         let chunk_size =
-            util::calculate_chunk_size(&deploy_ix, &vec![payer, buffer_authority_signer]);
+            util::calculate_chunk_size(deploy_ix, &vec![payer, buffer_authority_signer]);
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
 
             tx = self
-                .transaction_from_instructions(
-                    &[ix],
-                    &payer,
-                    vec![&payer, &buffer_authority_signer],
-                )
+                .transaction_from_instructions(&[ix], payer, vec![payer, buffer_authority_signer])
                 .await
                 .unwrap();
 
@@ -330,8 +325,8 @@ impl ClientExtensions for BanksClient {
                 )
                 .expect("Cannot parse deploy instruction")
                 .as_ref(),
-                &payer,
-                vec![&payer, &program_keypair, &buffer_authority_signer],
+                payer,
+                vec![payer, program_keypair, buffer_authority_signer],
             )
             .await
             .unwrap();

@@ -10,20 +10,11 @@ use {
     spl_token::state::Mint,
 };
 
-use solana_test_validator::{
-    ProgramInfo,
-    TestValidatorGenesis
-};
+use solana_test_validator::{ProgramInfo, TestValidatorGenesis};
 
 use spl_token::state::Account as TokenAccount;
 
-#[cfg(feature = "anchor")]
-use anchor_lang::{AccountDeserialize, AnchorSerialize, Discriminator};
-
 use std::str::FromStr;
-
-#[cfg(feature = "anchor")]
-use anchor_lang::InstructionData;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn transaction_from_instructions() {
@@ -31,15 +22,11 @@ async fn transaction_from_instructions() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(
-        &[
-            ProgramInfo {
-                program_id,
-                loader: solana_sdk::bpf_loader::id(),
-                program_path: std::path::PathBuf::from(program_path)
-            }
-        ]
-    );
+    genesis_config.add_programs_with_path(&[ProgramInfo {
+        program_id,
+        loader: solana_sdk::bpf_loader::id(),
+        program_path: std::path::PathBuf::from(program_path),
+    }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
     let mut rpc_client = test_validator.get_rpc_client();
@@ -67,12 +54,8 @@ async fn transaction_from_instructions() {
         .unwrap();
 
     assert!(rpc_client.send_and_confirm_transaction(&tx).is_ok());
-    let acc1_data = rpc_client
-        .get_account(&acc_1.pubkey())
-        .unwrap();
-    let acc2_data = rpc_client
-        .get_account(&acc_2.pubkey())
-        .unwrap();
+    let acc1_data = rpc_client.get_account(&acc_1.pubkey()).unwrap();
+    let acc2_data = rpc_client.get_account(&acc_2.pubkey()).unwrap();
     assert_eq!(acc1_data.owner, acc_1.pubkey());
     assert_eq!(acc2_data.owner, acc_2.pubkey());
 }
@@ -83,30 +66,24 @@ async fn create_account() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(
-        &[
-            ProgramInfo {
-                program_id,
-                loader: solana_sdk::bpf_loader::id(),
-                program_path: std::path::PathBuf::from(program_path)
-            }
-        ]
-    );
+    genesis_config.add_programs_with_path(&[ProgramInfo {
+        program_id,
+        loader: solana_sdk::bpf_loader::id(),
+        program_path: std::path::PathBuf::from(program_path),
+    }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
     let mut rpc_client = test_validator.get_rpc_client();
 
     let lamports = 1_000_000;
     let new_acc = Keypair::new();
-    
+
     rpc_client
         .create_account(&payer, &new_acc, lamports, 10, payer.pubkey())
         .await
         .unwrap();
 
-    let acc = rpc_client
-        .get_account(&new_acc.pubkey())
-        .unwrap();
+    let acc = rpc_client.get_account(&new_acc.pubkey()).unwrap();
     assert_eq!(acc.lamports, lamports);
 }
 
@@ -116,15 +93,11 @@ async fn create_token_mint() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(
-        &[
-            ProgramInfo {
-                program_id,
-                loader: solana_sdk::bpf_loader::id(),
-                program_path: std::path::PathBuf::from(program_path)
-            }
-        ]
-    );
+    genesis_config.add_programs_with_path(&[ProgramInfo {
+        program_id,
+        loader: solana_sdk::bpf_loader::id(),
+        program_path: std::path::PathBuf::from(program_path),
+    }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
     let mut rpc_client = test_validator.get_rpc_client();
@@ -145,9 +118,7 @@ async fn create_token_mint() {
         .await
         .unwrap();
     //Test mint with defaults creation
-    let mint_acc = rpc_client
-        .get_account(&mint.pubkey())
-        .unwrap();
+    let mint_acc = rpc_client.get_account(&mint.pubkey()).unwrap();
     let mint_data = Mint::unpack(&mint_acc.data).unwrap();
     assert_eq!(mint_data.freeze_authority.unwrap(), freeze_pubkey);
     assert_eq!(mint_data.decimals, decimals);
@@ -160,15 +131,11 @@ async fn create_token_account() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(
-        &[
-            ProgramInfo {
-                program_id,
-                loader: solana_sdk::bpf_loader::id(),
-                program_path: std::path::PathBuf::from(program_path)
-            }
-        ]
-    );
+    genesis_config.add_programs_with_path(&[ProgramInfo {
+        program_id,
+        loader: solana_sdk::bpf_loader::id(),
+        program_path: std::path::PathBuf::from(program_path),
+    }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
     let mut rpc_client = test_validator.get_rpc_client();
@@ -196,9 +163,7 @@ async fn create_token_account() {
         .await
         .unwrap();
 
-    let token_account = rpc_client
-        .get_account(&token_account.pubkey())
-        .unwrap();
+    let token_account = rpc_client.get_account(&token_account.pubkey()).unwrap();
 
     let token_account_data = TokenAccount::unpack(&token_account.data).unwrap();
 
@@ -213,15 +178,11 @@ async fn create_associated_token_account() {
     let program_path = "tests/artifacts/program_for_tests.so";
     let token_program_id = spl_token::ID; //could also use token-2022 ID
 
-    genesis_config.add_programs_with_path(
-        &[
-            ProgramInfo {
-                program_id,
-                loader: solana_sdk::bpf_loader::id(),
-                program_path: std::path::PathBuf::from(program_path)
-            }
-        ]
-    );
+    genesis_config.add_programs_with_path(&[ProgramInfo {
+        program_id,
+        loader: solana_sdk::bpf_loader::id(),
+        program_path: std::path::PathBuf::from(program_path),
+    }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
     let mut rpc_client = test_validator.get_rpc_client();
@@ -247,16 +208,13 @@ async fn create_associated_token_account() {
         .await
         .unwrap();
 
-    let token_account = rpc_client
-        .get_account(&token_account)
-        .unwrap();
+    let token_account = rpc_client.get_account(&token_account).unwrap();
 
     let token_account_data = TokenAccount::unpack(&token_account.data).unwrap();
 
     assert_eq!(token_account_data.mint, mint.pubkey());
     assert_eq!(token_account_data.owner, payer.pubkey());
 }
-
 
 #[tokio::test(flavor = "multi_thread")]
 async fn deploy_program() {
@@ -274,9 +232,7 @@ async fn deploy_program() {
         )
         .await
         .unwrap();
-    let deployed_program_account = rpc_client
-        .get_account(&program_keypair.pubkey())
-        .unwrap();
+    let deployed_program_account = rpc_client.get_account(&program_keypair.pubkey()).unwrap();
 
     assert_eq!(
         deployed_program_account.owner,
@@ -304,9 +260,7 @@ async fn deploy_upgradable_program() {
         )
         .await
         .unwrap();
-    let deployed_program_account = rpc_client
-        .get_account(&program_keypair.pubkey())
-        .unwrap();
+    let deployed_program_account = rpc_client.get_account(&program_keypair.pubkey()).unwrap();
 
     assert_eq!(
         deployed_program_account.owner,

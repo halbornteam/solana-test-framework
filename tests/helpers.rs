@@ -16,7 +16,7 @@ pub fn add_program() -> (ProgramTest, Pubkey) {
         processor!(program_for_tests::entry),
     );
 
-    return (program, program_id);
+    (program, program_id)
 }
 
 pub fn add_payer(program: &mut ProgramTest) -> Keypair {
