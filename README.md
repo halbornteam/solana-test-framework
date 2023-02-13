@@ -307,3 +307,16 @@ async fn warp_to_timestamp(
   timestamp: i64
 ) -> Result<(), ProgramTestError>
 ```
+
+Update the Price Account or Price Info, Time Stamp and Valid Slots of a Pyth Oracle.
+
+```rust
+async fn update_pyth_oracle(
+    &mut self,
+    address: Pubkey,
+    price_account: Option<PriceAccount>,
+    price_info: Option<PriceInfo>,
+    timestamp: Option<i64>,
+    valid_slots: Option<u64>,
+) -> Result<(), TestFrameWorkError>
+```

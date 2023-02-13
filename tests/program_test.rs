@@ -13,10 +13,7 @@ use {
 use borsh::BorshDeserialize;
 
 #[cfg(feature = "anchor")]
-use anchor_lang::{AccountDeserialize, AnchorSerialize, Discriminator};
-
-#[cfg(feature = "anchor")]
-use std::str::FromStr;
+use anchor_lang::AccountDeserialize;
 
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
@@ -128,7 +125,7 @@ async fn add_account_with_packable() {
     assert_eq!(mint_data.freeze_authority.unwrap(), freeze_authority);
     assert_eq!(mint_data.supply, supply);
     assert_eq!(mint_data.decimals, decimals);
-    assert_eq!(mint_data.is_initialized, true);
+    assert!(mint_data.is_initialized);
     assert_eq!(mint_data.mint_authority.unwrap(), mint_authority);
 }
 
@@ -138,13 +135,12 @@ async fn add_account_with_borsh() {
 
     let acc_pubkey = Pubkey::new_unique();
     let counter = 1;
-    let acc_data = program_for_tests::GreetingAccount { counter: counter };
+    let acc_data = program_for_tests::GreetingAccount { counter };
     program.add_account_with_borsh(acc_pubkey, program_id, acc_data);
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
     let greeting_acc = banks_client.get_account(acc_pubkey).await.unwrap().unwrap();
     let greeting_acc_data =
-        program_for_tests::GreetingAccount::try_from_slice(&mut greeting_acc.data.borrow())
-            .unwrap();
+        program_for_tests::GreetingAccount::try_from_slice(greeting_acc.data.borrow()).unwrap();
     assert_eq!(counter, greeting_acc_data.counter);
 }
 
@@ -248,7 +244,7 @@ async fn add_pyth_price_feed() {
         ..Default::default()
     };
     let price_account = PriceAccount {
-        magic:0xa1b2c3d4 as u32,
+        magic: 0xa1b2c3d4,
         ver: 2,
         expo: 5,
         atype: 3,
@@ -262,9 +258,19 @@ async fn add_pyth_price_feed() {
     };
 
     //add the pyth oracle to the context
-    program.add_pyth_oracle(oracle, program_id, Some(price_account), None, None);
-    program.add_pyth_oracle(oracle2, program_id, None, Some(price_info), Some(time_stamp));
-    
+    program
+        .add_pyth_oracle(oracle, program_id, Some(price_account), None, None)
+        .unwrap();
+    program
+        .add_pyth_oracle(
+            oracle2,
+            program_id,
+            None,
+            Some(price_info),
+            Some(time_stamp),
+        )
+        .unwrap();
+
     let (mut banks_client, _, _) = program.start().await;
 
     //get pyth price account data from chain
@@ -273,5 +279,4 @@ async fn add_pyth_price_feed() {
 
     let price_data = banks_client.get_pyth_price_account(oracle2).await.unwrap();
     assert_eq!(price_data, price_account);
-
 }

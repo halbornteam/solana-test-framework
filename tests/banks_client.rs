@@ -10,13 +10,7 @@ use {
     spl_token::state::{Account as TokenAccount, Mint},
 };
 
-#[cfg(feature = "anchor")]
-use anchor_lang::{AccountDeserialize, AnchorSerialize, Discriminator};
-
 use std::str::FromStr;
-
-#[cfg(feature = "anchor")]
-use anchor_lang::InstructionData;
 
 mod helpers;
 
@@ -69,7 +63,7 @@ async fn transaction_from_instructions_upgradeable() {
         "tests/artifacts/program_for_tests",
         Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap(),
         Some(Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap()),
-        None
+        None,
     );
     let payer = helpers::add_payer(&mut program);
     let acc_1 = Keypair::new();
@@ -132,7 +126,7 @@ async fn get_account_with_borsh() {
 
     let acc_pubkey = Pubkey::new_unique();
     let counter = 1;
-    let acc_data = program_for_tests::GreetingAccount { counter: counter };
+    let acc_data = program_for_tests::GreetingAccount { counter };
     program.add_account_with_borsh(acc_pubkey, program_id, acc_data);
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
     let greeting_acc_data: program_for_tests::GreetingAccount = banks_client
@@ -229,7 +223,7 @@ async fn create_associated_token_account() {
     let payer = helpers::add_payer(&mut program);
     let mint_pubkey = Pubkey::new_unique();
     let token_program_id = spl_token::ID; //could also use token-2022 ID
-    //Create mint with defaults
+                                          //Create mint with defaults
     program.add_token_mint(mint_pubkey, None, 10, 0, None);
 
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;

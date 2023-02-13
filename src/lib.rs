@@ -1,3 +1,4 @@
+pub mod error;
 mod extensions;
 pub mod util;
 

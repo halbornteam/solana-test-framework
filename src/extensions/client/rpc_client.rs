@@ -2,9 +2,7 @@ use super::*;
 use solana_client::rpc_client::RpcClient;
 
 #[cfg(feature = "pyth")]
-use {
-    pyth_sdk_solana::state::PriceAccount,
-};
+use pyth_sdk_solana::state::PriceAccount;
 
 #[async_trait]
 impl ClientExtensions for RpcClient {
@@ -38,9 +36,8 @@ impl ClientExtensions for RpcClient {
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account_data(&address).map(|account_data| {
-            T::deserialize(&mut account_data.as_ref()).map_err(Into::into)
-        })?
+        self.get_account_data(&address)
+            .map(|account_data| T::deserialize(&mut account_data.as_ref()).map_err(Into::into))?
     }
 
     #[cfg(feature = "pyth")]
@@ -49,13 +46,13 @@ impl ClientExtensions for RpcClient {
         address: Pubkey,
     ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
         self.get_account_data(&address).map(|account_data| {
-
             //PriceFeed::deserialize(&mut account_data.as_ref()).map_err(Into::into)
-            let data = account_data.clone();
-            let price_account = pyth_sdk_solana::state::load_price_account(&data)
-                .map_err(|_| BanksClientError::ClientError("Failed to deserialize price account"))?;
-            return Ok(price_account.clone())
-
+            let data = account_data;
+            let price_account =
+                pyth_sdk_solana::state::load_price_account(&data).map_err(|_| {
+                    BanksClientError::ClientError("Failed to deserialize price account")
+                })?;
+            Ok(*price_account)
         })?
     }
 
@@ -76,7 +73,9 @@ impl ClientExtensions for RpcClient {
             lamports,
             space,
             &owner,
-        )).map(|_| ()).map_err(Into::into)
+        ))
+        .map(|_| ())
+        .map_err(Into::into)
     }
 
     async fn create_token_mint(
@@ -89,31 +88,31 @@ impl ClientExtensions for RpcClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash()?;
         self.send_and_confirm_transaction(&system_transaction::create_account(
-            &payer,
-            &mint,
+            payer,
+            mint,
             latest_blockhash,
             Rent::default().minimum_balance(spl_token::state::Mint::get_packed_len()),
             spl_token::state::Mint::get_packed_len() as u64,
             &spl_token::id(),
         ))?;
 
-        let tx = self.transaction_from_instructions(
-            &[
-                spl_token::instruction::initialize_mint(
+        let tx = self
+            .transaction_from_instructions(
+                &[spl_token::instruction::initialize_mint(
                     &spl_token::id(),
                     &mint.pubkey(),
                     authority,
                     freeze_authority,
                     decimals,
-                )?
-            ],
-            payer,
-            vec![payer]
-        ).await?;
-        
-        self.send_and_confirm_transaction(
-            &tx
-        ).map(|_| ()).map_err(Into::into)
+                )?],
+                payer,
+                vec![payer],
+            )
+            .await?;
+
+        self.send_and_confirm_transaction(&tx)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     async fn create_token_account(
@@ -124,32 +123,32 @@ impl ClientExtensions for RpcClient {
         payer: &Keypair,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash()?;
-        
+
         self.send_and_confirm_transaction(&system_transaction::create_account(
-            &payer,
-            &account,
+            payer,
+            account,
             latest_blockhash,
             Rent::default().minimum_balance(spl_token::state::Account::get_packed_len()),
             spl_token::state::Account::get_packed_len() as u64,
             &spl_token::id(),
         ))?;
 
-        let tx = self.transaction_from_instructions(
-            &[
-                spl_token::instruction::initialize_account(
+        let tx = self
+            .transaction_from_instructions(
+                &[spl_token::instruction::initialize_account(
                     &spl_token::id(),
                     &account.pubkey(),
                     mint,
                     authority,
-                )?
-            ],
-            payer,
-            vec![payer]
-        ).await?;
+                )?],
+                payer,
+                vec![payer],
+            )
+            .await?;
 
-        self.send_and_confirm_transaction(
-            &tx
-        ).map(|_| ()).map_err(Into::into)
+        self.send_and_confirm_transaction(&tx)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     async fn create_associated_token_account(
@@ -158,28 +157,25 @@ impl ClientExtensions for RpcClient {
         mint: &Pubkey,
         payer: &Keypair,
         token_program_id: &Pubkey,
-    ) -> Result<Pubkey, Box<dyn std::error::Error>> {    
-        let associated_token_account = get_associated_token_address(
-            account,
-            mint
-        );
-        
-        let tx = self.transaction_from_instructions(
-            &[
-                create_associated_token_account_ix(
-                    &payer.pubkey(),
-                    &account,
-                    &mint,
-                    &token_program_id,
-                )
-            ],
-            payer,
-            vec![payer]
-        ).await?;
+    ) -> Result<Pubkey, Box<dyn std::error::Error>> {
+        let associated_token_account = get_associated_token_address(account, mint);
 
-        self.send_and_confirm_transaction(
-            &tx
-        ).map(|_| associated_token_account).map_err(Into::into)
+        let tx = self
+            .transaction_from_instructions(
+                &[create_associated_token_account_ix(
+                    &payer.pubkey(),
+                    account,
+                    mint,
+                    token_program_id,
+                )],
+                payer,
+                vec![payer],
+            )
+            .await?;
+
+        self.send_and_confirm_transaction(&tx)
+            .map(|_| associated_token_account)
+            .map_err(Into::into)
     }
 
     async fn deploy_program(
@@ -202,8 +198,8 @@ impl ClientExtensions for RpcClient {
 
         // 1 Create account
         self.send_and_confirm_transaction(&system_transaction::create_account(
-            &payer,
-            &program_keypair,
+            payer,
+            program_keypair,
             latest_blockhash,
             minimum_balance,
             program_len as u64,
@@ -215,13 +211,13 @@ impl ClientExtensions for RpcClient {
             loader_instruction::write(&program_keypair.pubkey(), &bpf_loader::id(), offset, bytes)
         };
 
-        let chunk_size = util::calculate_chunk_size(&deploy_ix, &vec![payer, program_keypair]);
+        let chunk_size = util::calculate_chunk_size(deploy_ix, &vec![payer, program_keypair]);
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
             let tx = self
-                .transaction_from_instructions(&[ix], &payer, vec![&payer, &program_keypair])
-            .await
+                .transaction_from_instructions(&[ix], payer, vec![payer, program_keypair])
+                .await
                 .unwrap();
 
             self.send_and_confirm_transaction(&tx)?;
@@ -238,21 +234,21 @@ impl ClientExtensions for RpcClient {
         // );
         // let finalize_tx = Transaction::new(&[payer, program_keypair], finalize_msg, latest_blockhash);
 
-        let finalize_tx = self.transaction_from_instructions(
-            &[
-                loader_instruction::finalize(
+        let finalize_tx = self
+            .transaction_from_instructions(
+                &[loader_instruction::finalize(
                     &program_keypair.pubkey(),
                     &bpf_loader::id(),
-                )   
-            ],
-            &payer,
-            vec![
+                )],
                 payer,
-                program_keypair
-            ]
-        ).await.unwrap();
-        
-        self.send_and_confirm_transaction(&finalize_tx).map(|_| ()).map_err(Into::into)
+                vec![payer, program_keypair],
+            )
+            .await
+            .unwrap();
+
+        self.send_and_confirm_transaction(&finalize_tx)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 
     async fn deploy_upgradable_program(
@@ -287,8 +283,8 @@ impl ClientExtensions for RpcClient {
         let mut tx = self
             .transaction_from_instructions(
                 create_buffer_ix.as_ref(),
-                &payer,
-                vec![&payer, &buffer_keypair],
+                payer,
+                vec![payer, buffer_keypair],
             )
             .await?;
 
@@ -305,17 +301,13 @@ impl ClientExtensions for RpcClient {
         };
 
         let chunk_size =
-            util::calculate_chunk_size(&deploy_ix, &vec![payer, buffer_authority_signer]);
+            util::calculate_chunk_size(deploy_ix, &vec![payer, buffer_authority_signer]);
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
 
             tx = self
-                .transaction_from_instructions(
-                    &[ix],
-                    &payer,
-                    vec![&payer, &buffer_authority_signer],
-                )
+                .transaction_from_instructions(&[ix], payer, vec![payer, buffer_authority_signer])
                 .await
                 .unwrap();
 
@@ -335,12 +327,13 @@ impl ClientExtensions for RpcClient {
                 )
                 .expect("Cannot parse deploy instruction")
                 .as_ref(),
-                &payer,
-                vec![&payer, &program_keypair, &buffer_authority_signer],
+                payer,
+                vec![payer, program_keypair, buffer_authority_signer],
             )
             .await?;
-        
-            self.send_and_confirm_transaction(&tx).map(|_| ()).map_err(Into::into)
 
+        self.send_and_confirm_transaction(&tx)
+            .map(|_| ())
+            .map_err(Into::into)
     }
 }
