@@ -176,6 +176,7 @@ impl ProgramTestExtension for ProgramTest {
         self.add_account_with_data(pubkey, owner, &v, executable);
     }
 
+    //Note that the total size is 8 (disciminator) + size
     #[cfg(feature = "anchor")]
     fn add_empty_account_with_anchor<T: AnchorSerialize + Discriminator>(
         &mut self,
