@@ -50,6 +50,15 @@ pub trait ProgramTestExtension {
         executable: bool,
     );
 
+    #[cfg(feature = "anchor")]
+    /// Adds an empty anchor account with a discriminator and specified size.
+    fn add_empty_account_with_anchor<T: AnchorSerialize + Discriminator>(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        size: usize,
+    );
+
     /// Adds an account with the given balance to the test environment.
     fn add_account_with_lamports(&mut self, pubkey: Pubkey, owner: Pubkey, lamports: u64);
 
@@ -165,6 +174,21 @@ impl ProgramTestExtension for ProgramTest {
         v.extend_from_slice(discriminator);
         v.extend_from_slice(&data);
         self.add_account_with_data(pubkey, owner, &v, executable);
+    }
+
+    #[cfg(feature = "anchor")]
+    fn add_empty_account_with_anchor<T: AnchorSerialize + Discriminator>(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        size: usize,
+    ) {
+        let discriminator = &T::discriminator();
+        let data = vec![0_u8; size];
+        let mut v = Vec::new();
+        v.extend_from_slice(discriminator);
+        v.extend_from_slice(&data);
+        self.add_account_with_data(pubkey, owner, &v, false);
     }
 
     fn add_account_with_lamports(&mut self, pubkey: Pubkey, owner: Pubkey, lamports: u64) {
