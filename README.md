@@ -10,12 +10,13 @@ This framework supports:
     - Solana v1.9 and Anchor v0.24.2
     - Solana v1.10 and Anchor v0.25.0
     - Solana v1.14 and Anchor v0.26.0
+    - Solana v1.15 and Anchor v0.27.0
     
 To use it in your project,
 
 1. add one of the following in your `Cargo.toml`:
  
-    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework"}`
+    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.9"}`
     - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.10" }`
     - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.14" }`
 
@@ -182,7 +183,7 @@ pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discrimin
 Add an empty [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/attr.account.html) account to the test environment with a specified data size. Note the total size of the accounts data is 8 (discriminator) + size.
 ```rust
 #[cfg(feature = "anchor")]
-pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
+pub fn add_empty_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
     &mut self,
     pubkey: Pubkey,
     owner: Pubkey,
