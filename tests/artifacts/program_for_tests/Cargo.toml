@@ -1,0 +1,17 @@
+[package]
+name = "program-for-tests"
+version = "0.1.0"
+description = "Created with Anchor"
+rust-version = "1.56"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "program_for_tests"
+
+[features]
+no-entrypoint = []
+cpi = ["no-entrypoint"]
+
+[dependencies]
+anchor-lang = { version = "0.26.0" }

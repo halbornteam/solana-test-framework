@@ -1,9 +1,6 @@
 # solana-test-framework
 
-`solana-test-framework` is build on top of the [`solana-program-test`](https://docs.rs/crate/solana-program-test/latest) crate and it provides a [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html)-based Proof of Concept framework for BPF programs.
-It extends [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html),
-[`ProgramTest`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTest.html)
-and [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) with several convenience methods.
+`solana-test-framework` extends [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html), [`RpcClient`](https://docs.rs/solana-client/latest/solana_client/rpc_client/struct.RpcClient.html), [`ProgramTest`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTest.html) and [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) with several convenience methods. It supports both external clusters and simulated runtime.
 
 &nbsp;
 &nbsp;
@@ -27,7 +24,7 @@ To use it in your project,
 &nbsp;
 
 ## Docs
-### [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html) extensions
+### [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html) and [`RpcClient`](https://docs.rs/solana-client/latest/solana_client/rpc_client/struct.RpcClient.html) extensions
 
 Assemble the given instructions into a transaction and sign it.
 All transactions created with this method are signed and payed for by the payer.
@@ -38,7 +35,7 @@ async fn transaction_from_instructions(
     ixs: &[Instruction],
     payer: &Keypair,
     signers: Vec<&Keypair>
-) -> Result<Transaction, BanksClientError>
+) -> Result<Transaction, Box<dyn std::error::Error>>
 ```
 
 &nbsp;
@@ -48,10 +45,10 @@ If the account is not found, `None` is returned.
 
 ```rust
 #[cfg(feature = "anchor")]
-fn get_account_with_anchor<T: AccountDeserialize>(
+async fn get_account_with_anchor<T: AccountDeserialize>(
     &mut self,
     address: Pubkey
-) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>>
+) -> Result<T, Box<dyn std::error::Error>>
 ```
 
 &nbsp;
@@ -60,10 +57,10 @@ Return and deserialize a [`Borsh`](https://docs.rs/borsh/latest/borsh/) account 
 If the account is not found, `None` is returned.
 
 ```rust
-fn get_account_with_borsh<T: BorshDeserialize>(
+async fn get_account_with_borsh<T: BorshDeserialize>(
     &mut self,
     address: Pubkey
-) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>>
+) -> Result<T, Box<dyn std::error::Error>>
 ```
 
 &nbsp;
@@ -78,7 +75,7 @@ async fn create_account(
     lamports: u64,
     space: u64,
     owner: Pubkey
-) -> transport::Result<Pubkey> {
+) -> Result<(), Box<dyn std::error::Error>>
 ```
 
 &nbsp;
@@ -93,7 +90,7 @@ async fn create_token_mint(
     freeze_authority: Option<&Pubkey>,
     decimals: u8,
     payer: &Keypair
-) -> transport::Result<Pubkey> {
+) -> Result<(), Box<dyn std::error::Error>>
 ```
 
 &nbsp;
@@ -107,7 +104,7 @@ async fn create_token_account(
     authority: &Pubkey,
     mint: &Pubkey,
     payer: &Keypair
-) -> transport::Result<Pubkey> {
+) -> Result<(), Box<dyn std::error::Error>>
 ```
 
 &nbsp;
@@ -120,7 +117,35 @@ async fn create_associated_token_account(
     authority: &Pubkey,
     mint: &Pubkey,
     payer: &Keypair
-) -> transport::Result<Pubkey> {
+) -> Result<Pubkey, Box<dyn std::error::Error>>
+```
+
+&nbsp;
+
+Deploy a final program
+
+```rust
+async fn deploy_program(
+    &mut self,
+    path_to_program: &str,
+    program_keypair: &Keypair,
+    payer: &Keypair,
+) -> Result<(), Box<dyn std::error::Error>>
+```
+
+&nbsp;
+
+Deploy an upgradeable program
+
+```rust
+async fn deploy_upgradable_program(
+    &mut self,
+    _path_to_program: &str,
+    _buffer_keypair: &Keypair,
+    _buffer_authority_signer: &Keypair,
+    _program_keypair: &Keypair,
+    _payer: &Keypair,
+) -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 &nbsp;
@@ -154,6 +179,19 @@ pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discrimin
 )
 ```
 
+Add an empty [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/attr.account.html) account to the test environment with a specified data size. Note the total size of the accounts data is 8 (discriminator) + size.
+```rust
+#[cfg(feature = "anchor")]
+pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
+    &mut self,
+    pubkey: Pubkey,
+    owner: Pubkey,
+    size: u64,
+)
+
+local_env_builder.add_empty_account_with_anchor::<HelloCounter>(user_pubkey, program::id(), 32);
+
+```
 &nbsp;
 
 Add an account with the given balance to the test environment.
@@ -257,6 +295,21 @@ fn add_associated_token_account(
 
 &nbsp;
 
+Add a BPF program to the test environment.
+The program is upgradeable if `Some` `program_authority` is provided.
+
+```rust
+fn add_bpf_program(
+    &mut self,
+    program_name: &str,
+    program_id: Pubkey,
+    program_authority: Option<Pubkey>,
+    process_instruction: Option<ProcessInstructionWithContext>
+)
+```
+
+&nbsp;
+
 ### [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
 
 Advance the internal clock to the provided timestamp.
@@ -268,32 +321,15 @@ async fn warp_to_timestamp(
 ) -> Result<(), ProgramTestError>
 ```
 
-&nbsp;
-
-Deploy program
+Update the Price Account or Price Info, Time Stamp and Valid Slots of a Pyth Oracle.
 
 ```rust
-async fn deploy_program(
+async fn update_pyth_oracle(
     &mut self,
-    path_to_program: &str,
-    program_keypair: &Keypair,
-    payer: &Keypair,
-) -> transport::Result<()>
+    address: Pubkey,
+    price_account: Option<PriceAccount>,
+    price_info: Option<PriceInfo>,
+    timestamp: Option<i64>,
+    valid_slots: Option<u64>,
+) -> Result<(), TestFrameWorkError>
 ```
-
-&nbsp;
-
-Deploy upgradable program
-
-```rust
-async fn deploy_upgradable_program(
-    &mut self,
-    path_to_program: &str,
-    buffer_keypair: &Keypair,
-    buffer_authority_signer: &Keypair,
-    program_keypair: &Keypair,
-    payer: &Keypair,
-) -> transport::Result<()>
-```
-
-&nbsp;
