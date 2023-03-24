@@ -179,6 +179,19 @@ pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discrimin
 )
 ```
 
+Add an empty [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/attr.account.html) account to the test environment with a specified data size. Note the total size of the accounts data is 8 (discriminator) + size.
+```rust
+#[cfg(feature = "anchor")]
+pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
+    &mut self,
+    pubkey: Pubkey,
+    owner: Pubkey,
+    size: u64,
+)
+
+local_env_builder.add_empty_account_with_anchor::<HelloCounter>(user_pubkey, program::id(), 32);
+
+```
 &nbsp;
 
 Add an account with the given balance to the test environment.
