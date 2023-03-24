@@ -37,6 +37,7 @@ async fn transaction_from_instructions() {
     assert_eq!(timestamp_before + moving_time, timestamp_now)
 }
 
+#[cfg(feature = "pyth")]
 #[tokio::test]
 async fn update_pyth_oracle() {
     let (mut program, program_id) = helpers::add_program();
