@@ -1,6 +1,6 @@
 [package]
 name = "solana-test-framework"
-version = "1.0.3"
+version = "1.9.0"
 edition = "2021"
 authors = ["lowprivuser"]
 
