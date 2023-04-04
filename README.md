@@ -7,12 +7,13 @@
 
 ## Setup
 This framework supports:
-    - Solana v1.9 and Anchor v0.24.2
-    - Solana v1.10 and Anchor v0.25.0
-    - Solana v1.11 
-    - Solana v1.12
-    - Solana v1.13
-    - Solana v1.14 and Anchor v0.26.0
+
+- Solana v1.9 and Anchor v0.24.2
+- Solana v1.10 and Anchor v0.25.0
+- Solana v1.11
+- Solana v1.12
+- Solana v1.13
+- Solana v1.14 and Anchor v0.26.0
     
 To use it in your project,
 
