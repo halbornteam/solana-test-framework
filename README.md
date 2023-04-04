@@ -9,6 +9,9 @@
 This framework supports:
     - Solana v1.9 and Anchor v0.24.2
     - Solana v1.10 and Anchor v0.25.0
+    - Solana v1.11 
+    - Solana v1.12
+    - Solana v1.13
     - Solana v1.14 and Anchor v0.26.0
     
 To use it in your project,
@@ -17,6 +20,9 @@ To use it in your project,
  
     - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.9"}`
     - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.10" }`
+    - Solana ~1.11: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.11" }`
+    - Solana ~1.12: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.12" }`
+    - Solana ~1.13: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.13" }`
     - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.14" }`
 
 2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
