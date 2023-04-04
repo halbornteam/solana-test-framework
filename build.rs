@@ -9,6 +9,6 @@ fn main() {
     let version = env!("CARGO_PKG_VERSION");
 
     if cfg!(feature = "anchor") && !anchor_supported.contains(&version) {
-        panic!("anchor doesn't support Solana {}", version)
+        panic!("Anchor doesn't support Solana {}", version)
     }
 }
