@@ -9,6 +9,18 @@ use solana_sdk::{
 use std::str::FromStr;
 
 pub fn add_program() -> (ProgramTest, Pubkey) {
+    let program_id = Pubkey::new_unique();
+    let program = ProgramTest::new(
+        "hello_world",
+        program_id,
+        processor!(helloworld::process_instruction),
+    );
+
+    (program, program_id)
+}
+
+#[cfg(feature = "anchor")]
+pub fn add_program_anchor() -> (ProgramTest, Pubkey) {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program = ProgramTest::new(
         "program_for_tests",

@@ -7,7 +7,7 @@ authors = ["lowprivuser"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-anchor = ["anchor-lang"]
+anchor = ["anchor-lang", "program-for-tests"]
 pyth = ["pyth-sdk-solana"]
 
 [dependencies]
@@ -31,6 +31,10 @@ serde = { version = "1.0.152"}
 serde_json = { version = "1.0.91", optional = true }
 thiserror = "1.0.38"
 
+#cargo doesnt allow optional dev dependencies, so we have to put this as a dep if we want to fully seperate anchor and vanilla solana
+program-for-tests = {path="tests/artifacts/program_for_tests", optional = true} 
+
 [dev-dependencies]
-program-for-tests = {path="tests/artifacts/program_for_tests"}
+
+hello_world = {path="tests/artifacts/hello_world"}
 solana-test-validator = "1.14"
