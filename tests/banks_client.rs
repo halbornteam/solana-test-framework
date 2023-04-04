@@ -105,31 +105,15 @@ async fn transaction_from_instructions_upgradeable() {
 }
 
 #[tokio::test]
-#[cfg(feature = "anchor")]
-async fn get_account_with_anchor() {
-    let (mut program, program_id) = helpers::add_program();
-    let acc_pubkey = Pubkey::new_unique();
-    let count = 1;
-    let anchor_data = program_for_tests::CountTracker { count };
-    program.add_account_with_anchor(acc_pubkey, program_id, anchor_data, false);
-    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
-    let anchor_acc_data: program_for_tests::CountTracker = banks_client
-        .get_account_with_anchor(acc_pubkey)
-        .await
-        .unwrap();
-    assert_eq!(count, anchor_acc_data.count)
-}
-
-#[tokio::test]
 async fn get_account_with_borsh() {
     let (mut program, program_id) = helpers::add_program();
 
     let acc_pubkey = Pubkey::new_unique();
     let counter = 1;
-    let acc_data = program_for_tests::GreetingAccount { counter };
+    let acc_data = helloworld::GreetingAccount { counter };
     program.add_account_with_borsh(acc_pubkey, program_id, acc_data);
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
-    let greeting_acc_data: program_for_tests::GreetingAccount = banks_client
+    let greeting_acc_data: helloworld::GreetingAccount = banks_client
         .get_account_with_borsh(acc_pubkey)
         .await
         .unwrap();

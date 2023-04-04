@@ -11,13 +11,7 @@ use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
 
 #[tokio::test]
 async fn transaction_from_instructions() {
-    let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
-    let program = ProgramTest::new(
-        "program_for_tests",
-        program_id,
-        processor!(program_for_tests::entry),
-    );
-
+    let (mut program, _) = helpers::add_program();
     let mut program_context = program.start_with_context().await;
 
     let clock_from_program_context: Clock =
