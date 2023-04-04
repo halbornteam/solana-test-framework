@@ -1,6 +1,6 @@
 [package]
 name = "solana-test-framework"
-version = "1.14.0"
+version = "1.11.0"
 edition = "2021"
 authors = ["lowprivuser"]
 
@@ -11,12 +11,12 @@ anchor = ["anchor-lang", "program-for-tests"]
 pyth = ["pyth-sdk-solana"]
 
 [dependencies]
-solana-program-test = "1.14"
-solana-sdk = "1.14"
-solana-program ="1.14"
-solana-banks-client = "1.14"
-solana-program-runtime = "1.14"
-solana-client = "1.14"
+solana-program-test = "1.11"
+solana-sdk = "1.11"
+solana-program ="1.11"
+solana-banks-client = "1.11"
+solana-program-runtime = "1.11"
+solana-client = "1.11"
 spl-token = "3.5.0"
 spl-associated-token-account = "1.1.2"
 anchor-lang = { version = "0.26.0", optional = true }
@@ -37,4 +37,4 @@ program-for-tests = {path="tests/artifacts/program_for_tests", optional = true}
 [dev-dependencies]
 
 hello_world = {path="tests/artifacts/hello_world"}
-solana-test-validator = "1.14"
+solana-test-validator = "1.11"
