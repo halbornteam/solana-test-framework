@@ -263,8 +263,7 @@ impl ClientExtensions for BanksClient {
         // multiply by 2 so program can be updated later on
         let program_len = buffer_len * 2;
         let minimum_balance = Rent::default().minimum_balance(
-            bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
-                .expect("Cannot get program len"),
+            bpf_loader_upgradeable::UpgradeableLoaderState::size_of_programdata(program_len),
         );
 
         // 1 Create buffer
@@ -351,6 +350,8 @@ impl ClientExtensions for BanksClient {
                 .await
                 .unwrap();
         }
+
+        self.process_transaction(tx).await.unwrap();
 
         return Ok(());
     }
