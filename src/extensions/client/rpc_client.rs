@@ -315,22 +315,37 @@ impl ClientExtensions for RpcClient {
         }
 
         // 3. Finalize
-        tx = self
-            .transaction_from_instructions(
-                bpf_loader_upgradeable::deploy_with_max_program_len(
-                    &payer.pubkey(),
-                    &program_keypair.pubkey(),
-                    &buffer_keypair.pubkey(),
-                    &buffer_authority_signer.pubkey(),
-                    minimum_balance,
-                    program_len,
+        if self.get_account(&program_keypair.pubkey()).is_ok() {
+            tx = self
+                .transaction_from_instructions(
+                    &[bpf_loader_upgradeable::upgrade(
+                        &program_keypair.pubkey(),
+                        &buffer_keypair.pubkey(),
+                        &buffer_authority_signer.pubkey(),
+                        &payer.pubkey(),
+                    )],
+                    payer,
+                    vec![payer, buffer_authority_signer],
                 )
-                .expect("Cannot parse deploy instruction")
-                .as_ref(),
-                payer,
-                vec![payer, program_keypair, buffer_authority_signer],
-            )
-            .await?;
+                .await?;
+        } else {
+            tx = self
+                .transaction_from_instructions(
+                    bpf_loader_upgradeable::deploy_with_max_program_len(
+                        &payer.pubkey(),
+                        &program_keypair.pubkey(),
+                        &buffer_keypair.pubkey(),
+                        &buffer_authority_signer.pubkey(),
+                        minimum_balance,
+                        program_len,
+                    )
+                    .expect("Cannot parse deploy instruction")
+                    .as_ref(),
+                    payer,
+                    vec![payer, program_keypair, buffer_authority_signer],
+                )
+                .await?;
+        }
 
         self.send_and_confirm_transaction(&tx)
             .map(|_| ())
