@@ -142,7 +142,7 @@ async fn create_token_mint() {
     let mint_acc = rpc_client
         .get_account_with_commitment(
             &mint.pubkey(),
-            solana_sdk::commitment_config::CommitmentConfig::confirmed(),
+            solana_sdk::commitment_config::CommitmentConfig::processed(),
         )
         .unwrap()
         .value
