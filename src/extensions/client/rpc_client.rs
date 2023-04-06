@@ -3,6 +3,7 @@ use solana_client::rpc_client::RpcClient;
 
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::PriceAccount;
+use solana_program::system_instruction;
 
 #[async_trait]
 impl ClientExtensions for RpcClient {
@@ -88,29 +89,29 @@ impl ClientExtensions for RpcClient {
     ) -> Result<(), Box<dyn std::error::Error>> {
         use solana_sdk::commitment_config::CommitmentConfig;
 
-        let latest_blockhash = self.get_latest_blockhash()?;
-        self.send_and_confirm_transaction(&system_transaction::create_account(
-            payer,
-            mint,
-            latest_blockhash,
+        let mut ixs = vec![system_instruction::create_account(
+            &payer.pubkey(),
+            &mint.pubkey(),
             Rent::default().minimum_balance(spl_token::state::Mint::get_packed_len()),
             spl_token::state::Mint::get_packed_len() as u64,
             &spl_token::id(),
-        ))?;
+        )];
+
+        ixs.push(
+            spl_token::instruction::initialize_mint(
+                &spl_token::id(),
+                &mint.pubkey(),
+                authority,
+                freeze_authority,
+                decimals,
+            )
+            .unwrap(),
+        );
 
         let tx = self
-            .transaction_from_instructions(
-                &[spl_token::instruction::initialize_mint(
-                    &spl_token::id(),
-                    &mint.pubkey(),
-                    authority,
-                    freeze_authority,
-                    decimals,
-                )?],
-                payer,
-                vec![payer],
-            )
-            .await?;
+            .transaction_from_instructions(&ixs, &payer, vec![&payer, &mint])
+            .await
+            .unwrap();
 
         self.send_and_confirm_transaction_with_spinner_and_commitment(
             &tx,

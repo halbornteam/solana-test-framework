@@ -1,3 +1,4 @@
+use solana_program::{native_token::sol_to_lamports, system_program};
 use solana_test_framework::*;
 
 use {
@@ -100,7 +101,23 @@ async fn create_token_mint() {
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+
+    let mut rpc_client = solana_client::rpc_client::RpcClient::new_with_commitment(
+        test_validator.rpc_url(),
+        solana_sdk::commitment_config::CommitmentConfig::confirmed(),
+    );
+
+    let admin = Keypair::new();
+    rpc_client
+        .create_account(
+            &payer,
+            &admin,
+            sol_to_lamports(1.0),
+            0,
+            system_program::id(),
+        )
+        .await
+        .unwrap();
 
     let mint = Keypair::new();
     let freeze_pubkey = Pubkey::new_unique();
@@ -110,17 +127,13 @@ async fn create_token_mint() {
     rpc_client
         .create_token_mint(
             &mint,
-            &payer.pubkey(),
+            &admin.pubkey(),
             Some(&freeze_pubkey),
             decimals,
-            &payer,
+            &admin,
         )
         .await
         .unwrap();
-
-    rpc_client.get_latest_blockhash_with_commitment(
-        solana_sdk::commitment_config::CommitmentConfig::finalized(),
-    );
 
     //Test mint with defaults creation
     let mint_acc = rpc_client.get_account(&mint.pubkey()).unwrap();
