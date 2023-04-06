@@ -135,6 +135,9 @@ async fn create_token_mint() {
         .await
         .unwrap();
 
+    let hash = rpc_client.get_latest_blockhash().unwrap();
+    rpc_client.get_new_latest_blockhash(&hash).unwrap();
+
     //Test mint with defaults creation
     let mint_acc = rpc_client
         .get_account_with_commitment(
@@ -144,9 +147,6 @@ async fn create_token_mint() {
         .unwrap()
         .value
         .unwrap();
-
-    let hash = rpc_client.get_latest_blockhash().unwrap();
-    rpc_client.get_new_latest_blockhash(&hash).unwrap();
 
     let mint_data = Mint::unpack(&mint_acc.data).unwrap();
     assert_eq!(mint_data.freeze_authority.unwrap(), freeze_pubkey);
