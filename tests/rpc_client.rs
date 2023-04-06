@@ -136,7 +136,14 @@ async fn create_token_mint() {
         .unwrap();
 
     //Test mint with defaults creation
-    let mint_acc = rpc_client.get_account(&mint.pubkey()).unwrap();
+    let mint_acc = rpc_client
+        .get_account_with_commitment(
+            &mint.pubkey(),
+            solana_sdk::commitment_config::CommitmentConfig::confirmed(),
+        )
+        .unwrap()
+        .value
+        .unwrap();
     let mint_data = Mint::unpack(&mint_acc.data).unwrap();
     assert_eq!(mint_data.freeze_authority.unwrap(), freeze_pubkey);
     assert_eq!(mint_data.decimals, decimals);
