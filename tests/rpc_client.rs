@@ -117,6 +117,11 @@ async fn create_token_mint() {
         )
         .await
         .unwrap();
+
+    rpc_client.get_latest_blockhash_with_commitment(
+        solana_sdk::commitment_config::CommitmentConfig::finalized(),
+    );
+
     //Test mint with defaults creation
     let mint_acc = rpc_client.get_account(&mint.pubkey()).unwrap();
     let mint_data = Mint::unpack(&mint_acc.data).unwrap();

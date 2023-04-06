@@ -150,6 +150,7 @@ impl ClientExtensions for RpcClient {
                 vec![payer],
             )
             .await?;
+        print!("tx: {:?}", tx);
 
         self.send_and_confirm_transaction(&tx)?;
 
