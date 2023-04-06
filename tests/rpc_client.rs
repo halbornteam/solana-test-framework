@@ -88,7 +88,7 @@ async fn create_account() {
     assert_eq!(acc.lamports, lamports);
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn create_token_mint() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
