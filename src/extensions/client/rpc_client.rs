@@ -86,6 +86,8 @@ impl ClientExtensions for RpcClient {
         decimals: u8,
         payer: &Keypair,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        use solana_sdk::commitment_config::CommitmentConfig;
+
         let latest_blockhash = self.get_latest_blockhash()?;
         self.send_and_confirm_transaction(&system_transaction::create_account(
             payer,
@@ -110,9 +112,12 @@ impl ClientExtensions for RpcClient {
             )
             .await?;
 
-        self.send_and_confirm_transaction(&tx)
-            .map(|_| ())
-            .map_err(Into::into)
+        self.send_and_confirm_transaction_with_spinner_and_commitment(
+            &tx,
+            CommitmentConfig::confirmed(),
+        )
+        .map(|_| ())
+        .map_err(Into::into)
     }
 
     async fn create_token_account(
@@ -146,9 +151,9 @@ impl ClientExtensions for RpcClient {
             )
             .await?;
 
-        self.send_and_confirm_transaction(&tx)
-            .map(|_| ())
-            .map_err(Into::into)
+        self.send_and_confirm_transaction(&tx)?;
+
+        Ok(())
     }
 
     async fn create_associated_token_account(
