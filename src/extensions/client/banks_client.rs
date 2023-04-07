@@ -352,6 +352,8 @@ impl ClientExtensions for BanksClient {
                 .unwrap();
         }
 
+        self.process_transaction(tx).await?;
+
         return Ok(());
     }
 }
