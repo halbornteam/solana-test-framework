@@ -113,12 +113,23 @@ impl ClientExtensions for RpcClient {
             .await
             .unwrap();
 
-        self.send_and_confirm_transaction_with_spinner_and_commitment(
-            &tx,
-            CommitmentConfig::confirmed(),
-        )
-        .map(|_| ())
-        .map_err(Into::into)
+        let signature = self
+            .send_and_confirm_transaction_with_spinner_and_commitment(
+                &tx,
+                CommitmentConfig::confirmed(),
+            )
+            .unwrap();
+
+        loop {
+            let confirmed = self.confirm_transaction(&signature)?;
+            if confirmed {
+                break;
+            }
+        }
+
+        println!("signature: {:?}", signature);
+
+        Ok(())
     }
 
     async fn create_token_account(
