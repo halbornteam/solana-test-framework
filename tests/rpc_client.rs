@@ -114,7 +114,7 @@ async fn create_token_mint() {
         .create_account(
             &payer,
             &admin,
-            sol_to_lamports(1.0),
+            sol_to_lamports(100.0),
             0,
             system_program::id(),
         )
@@ -124,6 +124,8 @@ async fn create_token_mint() {
     let mint = Keypair::new();
     let freeze_pubkey = Pubkey::new_unique();
     let decimals = 0;
+
+    sleep(Duration::from_millis(1000)).await;
 
     //Create mint with defaults
     rpc_client
@@ -146,7 +148,7 @@ async fn create_token_mint() {
     let mint_acc = rpc_client
         .get_account_with_commitment(
             &mint.pubkey(),
-            solana_sdk::commitment_config::CommitmentConfig::processed(),
+            solana_sdk::commitment_config::CommitmentConfig::confirmed(),
         )
         .unwrap()
         .value
