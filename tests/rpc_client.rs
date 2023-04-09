@@ -90,6 +90,8 @@ async fn create_account() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn create_token_mint() {
+    use tokio::time::{sleep, Duration};
+
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
@@ -137,6 +139,8 @@ async fn create_token_mint() {
 
     let hash = rpc_client.get_latest_blockhash().unwrap();
     rpc_client.get_new_latest_blockhash(&hash).unwrap();
+
+    sleep(Duration::from_millis(100)).await;
 
     //Test mint with defaults creation
     let mint_acc = rpc_client
