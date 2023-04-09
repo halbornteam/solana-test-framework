@@ -154,7 +154,9 @@ async fn create_token_mint() {
         .value
         .unwrap();
 
-    let mint_data = Mint::unpack(&mint_acc.data).unwrap();
+    println!("mint_acc: {:?}", mint_acc);
+
+    let mint_data = Mint::unpack_unchecked(&mint_acc.data).unwrap();
     assert_eq!(mint_data.freeze_authority.unwrap(), freeze_pubkey);
     assert_eq!(mint_data.decimals, decimals);
     assert_eq!(mint_acc.owner, spl_token::id());
