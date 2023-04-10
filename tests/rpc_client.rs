@@ -106,7 +106,7 @@ async fn create_token_mint() {
 
     let mut rpc_client = solana_client::rpc_client::RpcClient::new_with_commitment(
         test_validator.rpc_url(),
-        solana_sdk::commitment_config::CommitmentConfig::confirmed(),
+        solana_sdk::commitment_config::CommitmentConfig::finalized(),
     );
 
     let admin = Keypair::new();

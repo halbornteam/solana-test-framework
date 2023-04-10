@@ -116,7 +116,7 @@ impl ClientExtensions for RpcClient {
         let signature = self
             .send_and_confirm_transaction_with_spinner_and_commitment(
                 &tx,
-                CommitmentConfig::confirmed(),
+                CommitmentConfig::finalized(),
             )
             .unwrap();
 
