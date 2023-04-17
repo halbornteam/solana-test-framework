@@ -14,6 +14,7 @@ use std::str::FromStr;
 
 mod helpers;
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn transaction_from_instructions() {
     let (mut program, _) = helpers::add_program();
@@ -56,6 +57,7 @@ async fn transaction_from_instructions() {
     assert_eq!(acc2_data.owner, acc_2.pubkey());
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn transaction_from_instructions_upgradeable() {
     let mut program = ProgramTest::default();
@@ -104,6 +106,7 @@ async fn transaction_from_instructions_upgradeable() {
     assert_eq!(acc2_data.owner, acc_2.pubkey());
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn get_account_with_borsh() {
     let (mut program, program_id) = helpers::add_program();
@@ -120,6 +123,7 @@ async fn get_account_with_borsh() {
     assert_eq!(counter, greeting_acc_data.counter);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn create_account() {
     let (mut program, _) = helpers::add_program();
@@ -140,6 +144,7 @@ async fn create_account() {
     assert_eq!(acc.lamports, lamports);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn create_token_mint() {
     let (mut program, _) = helpers::add_program();
@@ -173,6 +178,7 @@ async fn create_token_mint() {
     assert_eq!(mint_acc.owner, spl_token::id());
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn create_token_account() {
     let (mut program, _) = helpers::add_program();
@@ -201,6 +207,7 @@ async fn create_token_account() {
     assert_eq!(token_account_data.owner, payer.pubkey());
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn create_associated_token_account() {
     let (mut program, _) = helpers::add_program();
@@ -229,6 +236,7 @@ async fn create_associated_token_account() {
     assert_eq!(token_account_data.owner, payer.pubkey());
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn deploy_program() {
     let (mut program, _) = helpers::add_program();
@@ -257,6 +265,7 @@ async fn deploy_program() {
     );
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn deploy_upgradable_program() {
     let (mut program, _) = helpers::add_program();

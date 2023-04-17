@@ -12,11 +12,12 @@ use {
 
 use borsh::BorshDeserialize;
 
-#[cfg(feature = "pyth")]
+#[cfg(all(feature = "pyth", not(feature = "anchor")))]
 use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
 
 mod helpers;
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn generate_accounts() {
     let (mut program, _) = helpers::add_program();
@@ -35,6 +36,7 @@ async fn generate_accounts() {
     assert_eq!(first_account_data.lamports, initial_lamports);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_account_with_data() {
     let (mut program, _) = helpers::add_program();
@@ -56,6 +58,7 @@ async fn add_account_with_data() {
     assert_eq!(acc.data, data);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_account_with_lamports() {
     let (mut program, _) = helpers::add_program();
@@ -73,6 +76,7 @@ async fn add_account_with_lamports() {
     assert_eq!(acc.lamports, lamports);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_account_with_packable() {
     let (mut program, _) = helpers::add_program();
@@ -110,6 +114,7 @@ async fn add_account_with_packable() {
     assert_eq!(mint_data.mint_authority.unwrap(), mint_authority);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_account_with_borsh() {
     let (mut program, program_id) = helpers::add_program();
@@ -125,6 +130,7 @@ async fn add_account_with_borsh() {
     assert_eq!(counter, greeting_acc_data.counter);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_token_mint() {
     let (mut program, _) = helpers::add_program();
@@ -147,6 +153,7 @@ async fn add_token_mint() {
     assert_eq!(mint_acc.owner, spl_token::id());
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_token_account() {
     let (mut program, _) = helpers::add_program();
@@ -182,6 +189,7 @@ async fn add_token_account() {
     assert_eq!(token_account_data.owner, owner);
 }
 
+#[cfg(not(feature = "anchor"))]
 #[tokio::test]
 async fn add_associated_token_account() {
     let (mut program, _) = helpers::add_program();
@@ -210,7 +218,7 @@ async fn add_associated_token_account() {
 }
 
 #[tokio::test]
-#[cfg(feature = "pyth")]
+#[cfg(all(feature = "pyth", not(feature = "anchor")))]
 async fn add_pyth_price_feed() {
     let (mut program, program_id) = helpers::add_program();
 
