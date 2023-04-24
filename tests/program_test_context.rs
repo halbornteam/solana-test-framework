@@ -6,10 +6,11 @@ use std::str::FromStr;
 
 mod helpers;
 
-#[cfg(feature = "pyth")]
+#[cfg(all(feature = "pyth", not(feature = "anchor")))]
 use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
 
 #[tokio::test]
+#[cfg(not(feature = "anchor"))]
 async fn transaction_from_instructions() {
     let (mut program, _) = helpers::add_program();
     let mut program_context = program.start_with_context().await;
@@ -31,7 +32,7 @@ async fn transaction_from_instructions() {
     assert_eq!(timestamp_before + moving_time, timestamp_now)
 }
 
-#[cfg(feature = "pyth")]
+#[cfg(all(feature = "pyth", not(feature = "anchor")))]
 #[tokio::test]
 async fn update_pyth_oracle() {
     let (mut program, program_id) = helpers::add_program();

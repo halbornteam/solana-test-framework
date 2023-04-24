@@ -7,7 +7,7 @@ mod helpers;
 #[tokio::test]
 #[cfg(feature = "anchor")]
 async fn get_account_with_anchor() {
-    let (mut program, program_id) = helpers::add_program();
+    let (mut program, program_id) = helpers::add_program_anchor();
     let acc_pubkey = Pubkey::new_unique();
     let count = 1;
     let anchor_data = program_for_tests::CountTracker { count };

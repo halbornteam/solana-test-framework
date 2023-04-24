@@ -311,6 +311,21 @@ fn add_bpf_program(
 
 &nbsp;
 
+Adds a Pyth oracle to the test environment. Either provide the `price_account` field or `price_info` and `time_stamp` field. 
+
+```rust
+fn add_pyth_oracle(
+    &mut self,
+    oracle: Pubkey,
+    program_id: Pubkey,
+    price_account: Option<PriceAccount>,
+    price_info: Option<PriceInfo>,
+    timestamp: Option<i64>,
+) -> Result<(), BanksClientError>
+```
+
+&nbsp;
+
 ### [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
 
 Advance the internal clock to the provided timestamp.
@@ -322,7 +337,7 @@ async fn warp_to_timestamp(
 ) -> Result<(), ProgramTestError>
 ```
 
-Update the Price Account or Price Info, Time Stamp and Valid Slots of a Pyth Oracle.
+Update a Pyth oracle. You can update the entire Oracle by providing the `price_account` or any of it's sub fields by providing the `price_info`, `time_stamp` and `valid_slots` fields.
 
 ```rust
 async fn update_pyth_oracle(

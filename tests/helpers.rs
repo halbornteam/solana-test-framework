@@ -8,6 +8,7 @@ use solana_sdk::{
 
 use std::str::FromStr;
 
+#[cfg(not(feature = "anchor"))]
 pub fn add_program() -> (ProgramTest, Pubkey) {
     let program_id = Pubkey::new_unique();
     let program = ProgramTest::new(
