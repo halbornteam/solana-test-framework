@@ -24,7 +24,7 @@ use anchor_lang::{AnchorSerialize, Discriminator};
 use {crate::util::PriceAccountWrapper, solana_program_test::BanksClientError};
 
 #[cfg(feature = "pyth")]
-pub use pyth_sdk_solana::state::{PriceAccount, PriceInfo};
+pub use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
 
 pub trait ProgramTestExtension {
     /// Adds a requested number of account with initial balance of 1_000 SOL to the test environment
