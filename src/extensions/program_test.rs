@@ -21,11 +21,10 @@ use spl_associated_token_account::get_associated_token_address;
 use anchor_lang::{AnchorSerialize, Discriminator};
 
 #[cfg(feature = "pyth")]
-use {
-    crate::util::PriceAccountWrapper,
-    pyth_sdk_solana::state::{PriceAccount, PriceInfo},
-    solana_program_test::BanksClientError,
-};
+use {crate::util::PriceAccountWrapper, solana_program_test::BanksClientError};
+
+#[cfg(feature = "pyth")]
+pub use pyth_sdk_solana::state::{PriceAccount, PriceInfo};
 
 pub trait ProgramTestExtension {
     /// Adds a requested number of account with initial balance of 1_000 SOL to the test environment
