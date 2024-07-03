@@ -6,7 +6,7 @@ use solana_program::{
     program_option::COption,
     program_pack::Pack,
 };
-use solana_program_runtime::invoke_context::ProcessInstructionWithContext;
+use solana_program_runtime::invoke_context::BuiltinFunctionWithContext;
 use solana_program_test::ProgramTest;
 use solana_sdk::{
     account::Account,
@@ -111,7 +111,7 @@ pub trait ProgramTestExtension {
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        process_instruction: Option<ProcessInstructionWithContext>,
+        process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
      /// Adds a BPF program to the test environment.
@@ -123,7 +123,7 @@ pub trait ProgramTestExtension {
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
         program_data: Pubkey, 
-        process_instruction: Option<ProcessInstructionWithContext>,
+        process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
     #[cfg(feature = "pyth")]
@@ -320,7 +320,7 @@ impl ProgramTestExtension for ProgramTest {
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        process_instruction: Option<ProcessInstructionWithContext>,
+        process_instruction: Option<BuiltinFunctionWithContext>,
     ) {
         if let Some(program_authority) = program_authority {
             let program_file =
@@ -394,7 +394,7 @@ impl ProgramTestExtension for ProgramTest {
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
         program_data_pubkey: Pubkey,
-        process_instruction: Option<ProcessInstructionWithContext>,
+        process_instruction: Option<BuiltinFunctionWithContext>,
     ) {
         if let Some(program_authority) = program_authority {
             let program_file =
