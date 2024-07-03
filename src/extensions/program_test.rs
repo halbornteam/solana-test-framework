@@ -6,7 +6,7 @@ use solana_program::{
     program_option::COption,
     program_pack::Pack,
 };
-use solana_program_runtime::invoke_context::ProcessInstructionWithContext;
+use solana_program_runtime::invoke_context::BuiltinFunctionWithContext;
 use solana_program_test::ProgramTest;
 use solana_sdk::{
     account::Account,
@@ -111,7 +111,19 @@ pub trait ProgramTestExtension {
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        process_instruction: Option<ProcessInstructionWithContext>,
+        process_instruction: Option<BuiltinFunctionWithContext>,
+    );
+
+     /// Adds a BPF program to the test environment.
+    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account 
+    /// This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
+    fn add_bpf_program_with_program_data(
+        &mut self,
+        program_name: &str,
+        program_id: Pubkey,
+        program_authority: Option<Pubkey>,
+        program_data: Pubkey, 
+        process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
     #[cfg(feature = "pyth")]
@@ -308,7 +320,7 @@ impl ProgramTestExtension for ProgramTest {
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        process_instruction: Option<ProcessInstructionWithContext>,
+        process_instruction: Option<BuiltinFunctionWithContext>,
     ) {
         if let Some(program_authority) = program_authority {
             let program_file =
@@ -316,6 +328,78 @@ impl ProgramTestExtension for ProgramTest {
             let program_bytes = solana_program_test::read_file(program_file.clone());
 
             let program_data_pubkey = Pubkey::new_unique();
+
+            let mut program = Vec::<u8>::new();
+            bincode::serialize_into(
+                &mut program,
+                &UpgradeableLoaderState::Program {
+                    programdata_address: program_data_pubkey,
+                },
+            )
+            .unwrap();
+
+            let mut program_data = Vec::<u8>::new();
+            bincode::serialize_into(
+                &mut program_data,
+                &UpgradeableLoaderState::ProgramData {
+                    slot: 0,
+                    upgrade_authority_address: Some(program_authority),
+                },
+            )
+            .unwrap();
+
+            info!(
+                "\"{}\" BPF program from {}{}",
+                program_name,
+                program_file.display(),
+                std::fs::metadata(&program_file)
+                    .map(|metadata| {
+                        metadata
+                            .modified()
+                            .map(|time| {
+                                format!(
+                                    ", modified {}",
+                                    HumanTime::from(time)
+                                        .to_text_en(Accuracy::Precise, Tense::Past)
+                                )
+                            })
+                            .ok()
+                    })
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default()
+            );
+
+            self.add_account_with_data(
+                program_id,
+                bpf_loader_upgradeable::id(),
+                program.as_ref(),
+                true,
+            );
+
+            self.add_account_with_data(
+                program_data_pubkey,
+                bpf_loader_upgradeable::id(),
+                &[program_data.as_slice(), program_bytes.as_slice()].concat(),
+                false,
+            );
+        } else {
+            self.add_program(program_name, program_id, process_instruction);
+        }
+    }
+
+    fn add_bpf_program_with_program_data(
+        &mut self,
+        program_name: &str,
+        program_id: Pubkey,
+        program_authority: Option<Pubkey>,
+        program_data_pubkey: Pubkey,
+        process_instruction: Option<BuiltinFunctionWithContext>,
+    ) {
+        if let Some(program_authority) = program_authority {
+            let program_file =
+                solana_program_test::find_file(&format!("{}.so", program_name)).unwrap();
+            let program_bytes = solana_program_test::read_file(program_file.clone());
 
             let mut program = Vec::<u8>::new();
             bincode::serialize_into(

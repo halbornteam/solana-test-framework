@@ -14,7 +14,10 @@ This framework supports:
 - Solana v1.12
 - Solana v1.13
 - Solana v1.14 and Anchor v0.26.0
-    
+- Solana v1.16 and Anchor v0.28.0
+- Solana v1.18 and Anchor v0.30.0
+
+
 To use it in your project,
 
 1. add one of the following in your `Cargo.toml`:
@@ -25,6 +28,8 @@ To use it in your project,
     - Solana ~1.12: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.12" }`
     - Solana ~1.13: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.13" }`
     - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.14" }`
+     - Solana ~1.16: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.16" }`
+    - Solana ~1.18: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.18" }`
 
 2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
 
@@ -315,6 +320,19 @@ fn add_bpf_program(
 )
 ```
 
+Adds BPF program to the test environment.
+The program is upgradeable if `Some` `program_authority` with the `program data` provided.
+This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
+```rust 
+fn add_bpf_program_with_program_data(
+    &mut self,
+    program_name: &str,
+    program_id: Pubkey,
+    program_authority: Option<Pubkey>,
+    program_data: Pubkey, 
+    process_instruction: Option<ProcessInstructionWithContext>,
+)
+```
 &nbsp;
 
 ### [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
