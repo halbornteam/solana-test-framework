@@ -4,8 +4,7 @@ use solana_sdk::{pubkey::Pubkey, sysvar::clock::Clock};
 
 use std::str::FromStr;
 
-mod helpers;
-
+use crate::helpers::correct_entry;
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
 
@@ -15,7 +14,7 @@ async fn transaction_from_instructions() {
     let program = ProgramTest::new(
         "program_for_tests",
         program_id,
-        processor!(program_for_tests::entry),
+        solana_program_test::processor!(correct_entry),
     );
 
     let mut program_context = program.start_with_context().await;
@@ -40,7 +39,7 @@ async fn transaction_from_instructions() {
 #[cfg(feature = "pyth")]
 #[tokio::test]
 async fn update_pyth_oracle() {
-    let (mut program, program_id) = helpers::add_program();
+    let (mut program, program_id) = crate::helpers::add_program();
 
     let oracle = Pubkey::new_unique();
 

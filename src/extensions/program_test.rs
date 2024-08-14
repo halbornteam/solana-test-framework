@@ -79,6 +79,7 @@ pub trait ProgramTestExtension {
     );
 
     /// Adds an SPL Token account to the test environment.
+    #[allow(clippy::too_many_arguments)]
     fn add_token_account(
         &mut self,
         pubkey: Pubkey,
@@ -93,6 +94,7 @@ pub trait ProgramTestExtension {
 
     /// Adds an associated token account to the test environment.
     /// Returns the address of the created account.
+    #[allow(clippy::too_many_arguments)]
     fn add_associated_token_account(
         &mut self,
         mint: Pubkey,
@@ -114,15 +116,15 @@ pub trait ProgramTestExtension {
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
-     /// Adds a BPF program to the test environment.
-    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account 
+    /// Adds a BPF program to the test environment.
+    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account
     /// This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
     fn add_bpf_program_with_program_data(
         &mut self,
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        program_data: Pubkey, 
+        program_data: Pubkey,
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 

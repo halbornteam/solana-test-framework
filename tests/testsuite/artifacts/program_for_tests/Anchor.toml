@@ -1,0 +1,19 @@
+[toolchain]
+anchor_version = "0.30.1"
+
+[features]
+seeds = false
+skip-lint = false
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.localnet]
+program_for_tests = "CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr"
+
+[scripts]
+test = "yarn run mocha -t 1000000 tests/"

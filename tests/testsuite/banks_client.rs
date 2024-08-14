@@ -10,9 +10,8 @@ use {
     spl_token::state::{Account as TokenAccount, Mint},
 };
 
+use crate::helpers;
 use std::str::FromStr;
-
-mod helpers;
 
 #[tokio::test]
 async fn transaction_from_instructions() {
@@ -60,7 +59,7 @@ async fn transaction_from_instructions() {
 async fn transaction_from_instructions_upgradeable() {
     let mut program = ProgramTest::default();
     program.add_bpf_program(
-        "tests/artifacts/program_for_tests",
+        "tests/testsuite/artifacts/program_for_tests",
         Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap(),
         Some(Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap()),
         None,
@@ -246,34 +245,6 @@ async fn create_associated_token_account() {
 }
 
 #[tokio::test]
-async fn deploy_program() {
-    let (mut program, _) = helpers::add_program();
-    let payer = helpers::add_payer(&mut program);
-
-    let program_keypair = Keypair::new();
-
-    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
-    banks_client
-        .deploy_program(
-            "tests/artifacts/program_for_tests.so",
-            &program_keypair,
-            &payer,
-        )
-        .await
-        .unwrap();
-    let deployed_program_account = banks_client
-        .get_account(program_keypair.pubkey())
-        .await
-        .unwrap()
-        .unwrap();
-
-    assert_eq!(
-        deployed_program_account.owner,
-        Pubkey::from_str("BPFLoader2111111111111111111111111111111111").unwrap()
-    );
-}
-
-#[tokio::test]
 async fn deploy_upgradable_program() {
     let (mut program, _) = helpers::add_program();
     let payer = helpers::add_payer(&mut program);
@@ -285,7 +256,7 @@ async fn deploy_upgradable_program() {
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
     banks_client
         .deploy_upgradable_program(
-            "tests/artifacts/program_for_tests.so",
+            "tests/testsuite/artifacts/program_for_tests.so",
             &buffer_keypair,
             &buffer_authority_signer,
             &program_keypair,

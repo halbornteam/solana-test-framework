@@ -1,8 +1,9 @@
 use super::*;
-use solana_client::rpc_client::RpcClient;
+use futures::future::join_all;
 
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::PriceAccount;
+use solana_client::nonblocking::rpc_client::RpcClient;
 
 #[async_trait]
 impl ClientExtensions for RpcClient {
@@ -12,7 +13,7 @@ impl ClientExtensions for RpcClient {
         payer: &Keypair,
         signers: Vec<&Keypair>,
     ) -> Result<Transaction, Box<dyn std::error::Error>> {
-        let latest_blockhash = self.get_latest_blockhash()?;
+        let latest_blockhash = self.get_latest_blockhash().await?;
 
         Ok(Transaction::new_signed_with_payer(
             ixs,
@@ -27,7 +28,7 @@ impl ClientExtensions for RpcClient {
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account_data(&address).map(|account_data| {
+        self.get_account_data(&address).await.map(|account_data| {
             T::try_deserialize(&mut account_data.as_ref()).map_err(Into::into)
         })?
     }
@@ -37,6 +38,7 @@ impl ClientExtensions for RpcClient {
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
         self.get_account_data(&address)
+            .await
             .map(|account_data| T::deserialize(&mut account_data.as_ref()).map_err(Into::into))?
     }
 
@@ -45,7 +47,7 @@ impl ClientExtensions for RpcClient {
         &mut self,
         address: Pubkey,
     ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
-        self.get_account_data(&address).map(|account_data| {
+        self.get_account_data(&address).await.map(|account_data| {
             //PriceFeed::deserialize(&mut account_data.as_ref()).map_err(Into::into)
             let data = account_data;
             let price_account =
@@ -64,7 +66,7 @@ impl ClientExtensions for RpcClient {
         space: u64,
         owner: Pubkey,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let latest_blockhash = self.get_latest_blockhash()?;
+        let latest_blockhash = self.get_latest_blockhash().await?;
 
         self.send_and_confirm_transaction(&system_transaction::create_account(
             from,
@@ -74,6 +76,7 @@ impl ClientExtensions for RpcClient {
             space,
             &owner,
         ))
+        .await
         .map(|_| ())
         .map_err(Into::into)
     }
@@ -86,7 +89,7 @@ impl ClientExtensions for RpcClient {
         decimals: u8,
         payer: &Keypair,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let latest_blockhash = self.get_latest_blockhash()?;
+        let latest_blockhash = self.get_latest_blockhash().await?;
         self.send_and_confirm_transaction(&system_transaction::create_account(
             payer,
             mint,
@@ -94,7 +97,8 @@ impl ClientExtensions for RpcClient {
             Rent::default().minimum_balance(spl_token::state::Mint::get_packed_len()),
             spl_token::state::Mint::get_packed_len() as u64,
             &spl_token::id(),
-        ))?;
+        ))
+        .await?;
 
         let tx = self
             .transaction_from_instructions(
@@ -111,6 +115,7 @@ impl ClientExtensions for RpcClient {
             .await?;
 
         self.send_and_confirm_transaction(&tx)
+            .await
             .map(|_| ())
             .map_err(Into::into)
     }
@@ -122,7 +127,7 @@ impl ClientExtensions for RpcClient {
         mint: &Pubkey,
         payer: &Keypair,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let latest_blockhash = self.get_latest_blockhash()?;
+        let latest_blockhash = self.get_latest_blockhash().await?;
 
         self.send_and_confirm_transaction(&system_transaction::create_account(
             payer,
@@ -131,7 +136,8 @@ impl ClientExtensions for RpcClient {
             Rent::default().minimum_balance(spl_token::state::Account::get_packed_len()),
             spl_token::state::Account::get_packed_len() as u64,
             &spl_token::id(),
-        ))?;
+        ))
+        .await?;
 
         let tx = self
             .transaction_from_instructions(
@@ -147,6 +153,7 @@ impl ClientExtensions for RpcClient {
             .await?;
 
         self.send_and_confirm_transaction(&tx)
+            .await
             .map(|_| ())
             .map_err(Into::into)
     }
@@ -174,6 +181,7 @@ impl ClientExtensions for RpcClient {
             .await?;
 
         self.send_and_confirm_transaction(&tx)
+            .await
             .map(|_| associated_token_account)
             .map_err(Into::into)
     }
@@ -191,10 +199,9 @@ impl ClientExtensions for RpcClient {
         // multiply by 2 so program can be updated later on
         let program_len = buffer_len;
         let minimum_balance = Rent::default().minimum_balance(
-            bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
-                .expect("Cannot get program len"),
+            bpf_loader_upgradeable::UpgradeableLoaderState::size_of_programdata(program_len),
         );
-        let latest_blockhash = self.get_latest_blockhash()?;
+        let latest_blockhash = self.get_latest_blockhash().await?;
 
         // 1 Create account
         self.send_and_confirm_transaction(&system_transaction::create_account(
@@ -204,7 +211,8 @@ impl ClientExtensions for RpcClient {
             minimum_balance,
             program_len as u64,
             &bpf_loader::id(),
-        ))?;
+        ))
+        .await?;
 
         // 2. Write to buffer
         let deploy_ix = |offset: u32, bytes: Vec<u8>| {
@@ -220,7 +228,7 @@ impl ClientExtensions for RpcClient {
                 .await
                 .unwrap();
 
-            self.send_and_confirm_transaction(&tx)?;
+            self.send_and_confirm_transaction(&tx).await?;
         }
 
         // 3. Finalize
@@ -247,6 +255,7 @@ impl ClientExtensions for RpcClient {
             .unwrap();
 
         self.send_and_confirm_transaction(&finalize_tx)
+            .await
             .map(|_| ())
             .map_err(Into::into)
     }
@@ -266,8 +275,7 @@ impl ClientExtensions for RpcClient {
         // multiply by 2 so program can be updated later on
         let program_len = buffer_len * 2;
         let minimum_balance = Rent::default().minimum_balance(
-            bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
-                .expect("Cannot get program len"),
+            bpf_loader_upgradeable::UpgradeableLoaderState::size_of_programdata(program_len),
         );
 
         // 1 Create buffer
@@ -288,7 +296,7 @@ impl ClientExtensions for RpcClient {
             )
             .await?;
 
-        self.send_and_confirm_transaction(&tx)?;
+        self.send_and_confirm_transaction(&tx).await?;
 
         // 2 Write to buffer
         let deploy_ix = |offset: u32, bytes: Vec<u8>| {
@@ -303,16 +311,24 @@ impl ClientExtensions for RpcClient {
         let chunk_size =
             util::calculate_chunk_size(deploy_ix, &vec![payer, buffer_authority_signer]);
 
+        let mut txs = vec![];
+
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
-            let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
-
-            tx = self
-                .transaction_from_instructions(&[ix], payer, vec![payer, buffer_authority_signer])
-                .await
-                .unwrap();
-
-            self.send_and_confirm_transaction(&tx)?;
+            txs.push(Transaction::new_signed_with_payer(
+                &[deploy_ix(i * chunk_size as u32, chunk.to_vec())],
+                Some(&payer.pubkey()),
+                &vec![payer, buffer_authority_signer],
+                self.get_latest_blockhash().await?,
+            ));
         }
+
+        let mut futures = vec![];
+
+        for tx in txs.iter() {
+            futures.push(self.send_and_confirm_transaction(tx));
+        }
+
+        join_all(futures).await;
 
         // 3. Finalize
         tx = self
@@ -333,6 +349,7 @@ impl ClientExtensions for RpcClient {
             .await?;
 
         self.send_and_confirm_transaction(&tx)
+            .await
             .map(|_| ())
             .map_err(Into::into)
     }
