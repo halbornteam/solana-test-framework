@@ -180,7 +180,7 @@ impl ProgramTestExtension for ProgramTest {
         anchor_data: T,
         executable: bool,
     ) {
-        let discriminator = &T::discriminator();
+        let discriminator = &T::DISCRIMINATOR;
         let data = anchor_data
             .try_to_vec()
             .expect("Cannot serialize provided anchor account");
@@ -190,7 +190,7 @@ impl ProgramTestExtension for ProgramTest {
         self.add_account_with_data(pubkey, owner, &v, executable);
     }
 
-    //Note that the total size is 8 (disciminator) + size
+    //Note that the total size is 8 (discriminator) + size
     #[cfg(feature = "anchor")]
     fn add_empty_account_with_anchor<T: AnchorSerialize + Discriminator>(
         &mut self,
@@ -198,7 +198,7 @@ impl ProgramTestExtension for ProgramTest {
         owner: Pubkey,
         size: usize,
     ) {
-        let discriminator = &T::discriminator();
+        let discriminator = &T::DISCRIMINATOR;
         let data = vec![0_u8; size];
         let mut v = Vec::new();
         v.extend_from_slice(discriminator);
