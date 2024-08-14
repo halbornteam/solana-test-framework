@@ -23,7 +23,7 @@ use anchor_lang::{AnchorSerialize, Discriminator};
 #[cfg(feature = "pyth")]
 use {
     crate::util::PriceAccountWrapper,
-    pyth_sdk_solana::state::{PriceAccount, PriceInfo},
+    pyth_sdk_solana::state::{PriceInfo, SolanaPriceAccount},
     solana_program_test::BanksClientError,
 };
 
@@ -134,7 +134,7 @@ pub trait ProgramTestExtension {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
     ) -> Result<(), BanksClientError>;
@@ -468,28 +468,26 @@ impl ProgramTestExtension for ProgramTest {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
     ) -> Result<(), BanksClientError> {
         let data = if let Some(price_account) = price_account {
             bincode::serialize(&PriceAccountWrapper(&price_account)).unwrap()
         } else if let (Some(price_info), Some(timestamp)) = (price_info, timestamp) {
-            bincode::serialize(&PriceAccountWrapper(
-                &pyth_sdk_solana::state::PriceAccount {
-                    magic: 0xa1b2c3d4,
-                    ver: 2,
-                    expo: 5,
-                    atype: 3,
-                    agg: price_info,
-                    timestamp,
-                    prev_timestamp: 100,
-                    prev_price: 60,
-                    prev_conf: 70,
-                    prev_slot: 1,
-                    ..Default::default()
-                },
-            ))
+            bincode::serialize(&PriceAccountWrapper(&SolanaPriceAccount {
+                magic: 0xa1b2c3d4,
+                ver: 2,
+                expo: 5,
+                atype: 3,
+                agg: price_info,
+                timestamp,
+                prev_timestamp: 100,
+                prev_price: 60,
+                prev_conf: 70,
+                prev_slot: 1,
+                ..Default::default()
+            }))
             .unwrap()
         } else {
             return Err(BanksClientError::ClientError(

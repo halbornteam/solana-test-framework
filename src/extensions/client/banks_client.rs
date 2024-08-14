@@ -1,7 +1,7 @@
 use super::*;
 
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::PriceAccount;
+use pyth_sdk_solana::state::SolanaPriceAccount;
 
 #[async_trait]
 impl ClientExtensions for BanksClient {
@@ -54,7 +54,7 @@ impl ClientExtensions for BanksClient {
     async fn get_pyth_price_account(
         &mut self,
         address: Pubkey,
-    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
+    ) -> Result<SolanaPriceAccount, Box<dyn std::error::Error>> {
         let account = self.get_account(address).await?.unwrap();
 
         let price_account = pyth_sdk_solana::state::load_price_account(account.data.as_ref())

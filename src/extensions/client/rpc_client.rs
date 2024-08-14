@@ -2,7 +2,7 @@ use super::*;
 use futures::future::join_all;
 
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::PriceAccount;
+use pyth_sdk_solana::state::SolanaPriceAccount;
 use solana_client::nonblocking::rpc_client::RpcClient;
 
 #[async_trait]
@@ -46,7 +46,7 @@ impl ClientExtensions for RpcClient {
     async fn get_pyth_price_account(
         &mut self,
         address: Pubkey,
-    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
+    ) -> Result<SolanaPriceAccount, Box<dyn std::error::Error>> {
         self.get_account_data(&address).await.map(|account_data| {
             //PriceFeed::deserialize(&mut account_data.as_ref()).map_err(Into::into)
             let data = account_data;

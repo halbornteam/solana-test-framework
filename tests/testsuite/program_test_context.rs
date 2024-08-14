@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use crate::helpers::correct_entry;
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
+use pyth_sdk_solana::state::{PriceInfo, PriceStatus, SolanaPriceAccount};
 
 #[tokio::test]
 async fn transaction_from_instructions() {
@@ -52,7 +52,7 @@ async fn update_pyth_oracle() {
         ..Default::default()
     };
     let valid_slot = 10;
-    let price_account = PriceAccount {
+    let price_account = SolanaPriceAccount {
         magic: 0xa1b2c3d4,
         ver: 2,
         expo: 5,
@@ -86,7 +86,7 @@ async fn update_pyth_oracle() {
         pub_slot: 3,
         ..Default::default()
     };
-    let price_account2 = PriceAccount {
+    let price_account2 = SolanaPriceAccount {
         magic: 0xa1b2c3d4,
         ver: 2,
         expo: 5,

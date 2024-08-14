@@ -17,7 +17,7 @@ use {anchor_lang::AccountDeserialize, program_for_tests::CountTracker};
 
 use crate::helpers;
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
+use pyth_sdk_solana::state::{PriceInfo, PriceStatus, SolanaPriceAccount};
 
 #[tokio::test]
 async fn generate_accounts() {
@@ -256,7 +256,7 @@ async fn add_pyth_price_feed() {
         pub_slot: 3,
         ..Default::default()
     };
-    let price_account = PriceAccount {
+    let price_account = SolanaPriceAccount {
         magic: 0xa1b2c3d4,
         ver: 2,
         expo: 5,
