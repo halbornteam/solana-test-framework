@@ -11,7 +11,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use spl_associated_token_account::{
-    get_associated_token_address,
+    get_associated_token_address_with_program_id,
     instruction::create_associated_token_account as create_associated_token_account_ix,
 };
 
