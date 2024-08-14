@@ -3,9 +3,7 @@ use borsh::BorshDeserialize;
 use futures::FutureExt;
 use solana_program::{bpf_loader_upgradeable, program_pack::Pack};
 use solana_sdk::{
-    bpf_loader,
     instruction::Instruction,
-    loader_instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     system_transaction,
@@ -119,17 +117,6 @@ pub trait ClientExtensions {
         _payer: &Keypair,
         _token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
-        unimplemented!();
-    }
-
-    #[deprecated]
-    /// Deploy a program
-    async fn deploy_program(
-        &mut self,
-        _path_to_program: &str,
-        _program_keypair: &Keypair,
-        _payer: &Keypair,
-    ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!();
     }
 

@@ -24,7 +24,7 @@ async fn transaction_from_instructions() {
 
     genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
         upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
@@ -69,7 +69,7 @@ async fn create_account() {
 
     genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
         upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
@@ -97,7 +97,7 @@ async fn create_token_mint() {
 
     genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
         upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
@@ -136,7 +136,7 @@ async fn create_token_account() {
 
     genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
         upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
@@ -187,7 +187,7 @@ async fn create_associated_token_account() {
 
     genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
         upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);

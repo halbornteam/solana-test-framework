@@ -134,19 +134,6 @@ async fn create_associated_token_account(
 
 &nbsp;
 
-Deploy a final program
-
-```rust
-async fn deploy_program(
-    &mut self,
-    path_to_program: &str,
-    program_keypair: &Keypair,
-    payer: &Keypair,
-) -> Result<(), Box<dyn std::error::Error>>
-```
-
-&nbsp;
-
 Deploy an upgradeable program
 
 ```rust
