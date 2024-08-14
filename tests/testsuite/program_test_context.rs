@@ -4,7 +4,6 @@ use solana_sdk::{pubkey::Pubkey, sysvar::clock::Clock};
 
 use std::str::FromStr;
 
-use crate::helpers::correct_entry;
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::{PriceInfo, PriceStatus, SolanaPriceAccount};
 
@@ -14,7 +13,7 @@ async fn transaction_from_instructions() {
     let program = ProgramTest::new(
         "program_for_tests",
         program_id,
-        solana_program_test::processor!(correct_entry),
+        processor!(program_for_tests::entry),
     );
 
     let mut program_context = program.start_with_context().await;
