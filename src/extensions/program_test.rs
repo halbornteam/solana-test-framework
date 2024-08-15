@@ -123,6 +123,7 @@ pub trait ProgramTestExtension {
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
         program_data: Pubkey,
+        upgrade_slot: u64,
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
