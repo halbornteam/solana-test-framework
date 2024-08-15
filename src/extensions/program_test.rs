@@ -114,15 +114,15 @@ pub trait ProgramTestExtension {
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
-     /// Adds a BPF program to the test environment.
-    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account 
+    /// Adds a BPF program to the test environment.
+    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account
     /// This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
     fn add_bpf_program_with_program_data(
         &mut self,
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        program_data: Pubkey, 
+        program_data: Pubkey,
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
@@ -394,6 +394,7 @@ impl ProgramTestExtension for ProgramTest {
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
         program_data_pubkey: Pubkey,
+        upgrade_slot: u64,
         process_instruction: Option<BuiltinFunctionWithContext>,
     ) {
         if let Some(program_authority) = program_authority {
@@ -414,7 +415,7 @@ impl ProgramTestExtension for ProgramTest {
             bincode::serialize_into(
                 &mut program_data,
                 &UpgradeableLoaderState::ProgramData {
-                    slot: 0,
+                    slot: upgrade_slot,
                     upgrade_authority_address: Some(program_authority),
                 },
             )
