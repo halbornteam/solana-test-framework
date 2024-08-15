@@ -21,7 +21,7 @@ This framework supports:
 To use it in your project,
 
 1. add one of the following in your `Cargo.toml`:
- 
+
     - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.9"}`
     - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.10" }`
     - Solana ~1.11: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.11" }`
@@ -323,13 +323,14 @@ fn add_bpf_program(
 Adds BPF program to the test environment.
 The program is upgradeable if `Some` `program_authority` with the `program data` provided.
 This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
-```rust 
+```rust
 fn add_bpf_program_with_program_data(
     &mut self,
     program_name: &str,
     program_id: Pubkey,
     program_authority: Option<Pubkey>,
-    program_data: Pubkey, 
+    program_data: Pubkey,
+    upgrade_slot: u64,
     process_instruction: Option<ProcessInstructionWithContext>,
 )
 ```
