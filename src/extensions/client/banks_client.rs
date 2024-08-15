@@ -26,28 +26,30 @@ impl ClientExtensions for BanksClient {
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account(address)
-            .map(|result| {
-                let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-                T::try_deserialize(&mut account.data.as_ref())
-                    .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
-            })
-            .await
-            .map_err(Into::into)
+        let account = self
+            .get_account(address)
+            .await?
+            .ok_or(BanksClientError::ClientError("Account not found"))?;
+        T::try_deserialize(&mut account.data.as_ref()).map_err(|_| {
+            Into::into(BanksClientError::ClientError(
+                "Failed to deserialize account",
+            ))
+        })
     }
 
     async fn get_account_with_borsh<T: BorshDeserialize>(
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account(address)
-            .map(|result| {
-                let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-                T::deserialize(&mut account.data.as_ref())
-                    .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
-            })
-            .await
-            .map_err(Into::into)
+        let account = self
+            .get_account(address)
+            .await?
+            .ok_or(BanksClientError::ClientError("Account not found"))?;
+        T::deserialize(&mut account.data.as_ref()).map_err(|_| {
+            Into::into(BanksClientError::ClientError(
+                "Failed to deserialize account",
+            ))
+        })
     }
 
     #[cfg(feature = "pyth")]

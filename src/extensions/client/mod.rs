@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use borsh::BorshDeserialize;
-use futures::FutureExt;
 use solana_program::{bpf_loader_upgradeable, program_pack::Pack};
 use solana_sdk::{
     instruction::Instruction,
