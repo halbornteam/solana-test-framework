@@ -22,14 +22,14 @@ To use it in your project,
 
 1. add one of the following in your `Cargo.toml`:
  
-    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.9"}`
-    - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.10" }`
-    - Solana ~1.11: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.11" }`
-    - Solana ~1.12: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.12" }`
-    - Solana ~1.13: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.13" }`
-    - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.14" }`
-     - Solana ~1.16: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.16" }`
-    - Solana ~1.18: `solana-test-framework = { git = "https://github.com/halbornlabs/solana-test-framework", branch = "solana1.18" }`
+    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.9"}`
+    - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.10" }`
+    - Solana ~1.11: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.11" }`
+    - Solana ~1.12: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.12" }`
+    - Solana ~1.13: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.13" }`
+    - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.14" }`
+     - Solana ~1.16: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.16" }`
+    - Solana ~1.18: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.18" }`
 
 2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
 
