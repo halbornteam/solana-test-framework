@@ -23,7 +23,7 @@ use anchor_lang::{AnchorSerialize, Discriminator};
 #[cfg(feature = "pyth")]
 use {
     crate::util::PriceAccountWrapper,
-    pyth_sdk_solana::state::{PriceAccount, PriceInfo},
+    pyth_sdk_solana::state::{PriceInfo, SolanaPriceAccount},
     solana_program_test::BanksClientError,
 };
 
@@ -114,15 +114,15 @@ pub trait ProgramTestExtension {
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
-     /// Adds a BPF program to the test environment.
-    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account 
+    /// Adds a BPF program to the test environment.
+    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account
     /// This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
     fn add_bpf_program_with_program_data(
         &mut self,
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        program_data: Pubkey, 
+        program_data: Pubkey,
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
@@ -132,7 +132,7 @@ pub trait ProgramTestExtension {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
     ) -> Result<(), BanksClientError>;
@@ -232,14 +232,9 @@ impl ProgramTestExtension for ProgramTest {
         owner: Pubkey,
         data: B,
     ) {
-        self.add_account_with_data(
-            pubkey,
-            owner,
-            data.try_to_vec()
-                .expect("failed to serialize data")
-                .as_ref(),
-            false,
-        );
+        let mut buffer: Vec<u8> = Vec::new();
+        data.serialize(&mut buffer).unwrap();
+        self.add_account_with_data(pubkey, owner, buffer.as_ref(), false);
     }
 
     fn add_token_mint(
@@ -466,7 +461,7 @@ impl ProgramTestExtension for ProgramTest {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
     ) -> Result<(), BanksClientError> {
@@ -474,7 +469,7 @@ impl ProgramTestExtension for ProgramTest {
             bincode::serialize(&PriceAccountWrapper(&price_account)).unwrap()
         } else if let (Some(price_info), Some(timestamp)) = (price_info, timestamp) {
             bincode::serialize(&PriceAccountWrapper(
-                &pyth_sdk_solana::state::PriceAccount {
+                &pyth_sdk_solana::state::SolanaPriceAccount {
                     magic: 0xa1b2c3d4,
                     ver: 2,
                     expo: 5,
