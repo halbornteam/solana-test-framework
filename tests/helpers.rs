@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use solana_test_framework::*;
 
 use solana_sdk::{

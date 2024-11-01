@@ -323,13 +323,13 @@ fn add_bpf_program(
 Adds BPF program to the test environment.
 The program is upgradeable if `Some` `program_authority` with the `program data` provided.
 This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
-```rust 
+```rust
 fn add_bpf_program_with_program_data(
     &mut self,
     program_name: &str,
     program_id: Pubkey,
     program_authority: Option<Pubkey>,
-    program_data: Pubkey, 
+    program_data: Pubkey,
     process_instruction: Option<ProcessInstructionWithContext>,
 )
 ```
@@ -352,7 +352,7 @@ Update the Price Account or Price Info, Time Stamp and Valid Slots of a Pyth Ora
 async fn update_pyth_oracle(
     &mut self,
     address: Pubkey,
-    price_account: Option<PriceAccount>,
+    price_account: Option<SolanaPriceAccount>,
     price_info: Option<PriceInfo>,
     timestamp: Option<i64>,
     valid_slots: Option<u64>,

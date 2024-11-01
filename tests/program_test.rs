@@ -1,3 +1,4 @@
+use borsh::BorshDeserialize;
 use solana_test_framework::*;
 
 use std::borrow::Borrow;
@@ -10,13 +11,11 @@ use {
     spl_token::state::{Account as TokenAccount, Mint},
 };
 
-use borsh::BorshDeserialize;
-
 #[cfg(feature = "anchor")]
 use {anchor_lang::AccountDeserialize, program_for_tests::CountTracker};
 
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
+use pyth_sdk_solana::state::{PriceInfo, PriceStatus, SolanaPriceAccount};
 
 mod helpers;
 
@@ -153,7 +152,7 @@ async fn add_account_with_borsh() {
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
     let greeting_acc = banks_client.get_account(acc_pubkey).await.unwrap().unwrap();
     let greeting_acc_data =
-        program_for_tests::GreetingAccount::try_from_slice(greeting_acc.data.borrow()).unwrap();
+        program_for_tests::GreetingAccount::deserialize(&mut greeting_acc.data.borrow()).unwrap();
     assert_eq!(counter, greeting_acc_data.counter);
 }
 
@@ -256,7 +255,7 @@ async fn add_pyth_price_feed() {
         pub_slot: 3,
         ..Default::default()
     };
-    let price_account = PriceAccount {
+    let price_account = SolanaPriceAccount {
         magic: 0xa1b2c3d4,
         ver: 2,
         expo: 5,

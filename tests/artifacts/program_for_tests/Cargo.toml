@@ -2,7 +2,6 @@
 name = "program-for-tests"
 version = "0.1.0"
 description = "Created with Anchor"
-rust-version = "1.56"
 edition = "2021"
 
 [lib]
@@ -14,4 +13,4 @@ no-entrypoint = []
 cpi = ["no-entrypoint"]
 
 [dependencies]
-anchor-lang = { version = "0.26.0" }
+anchor-lang = { version = "0.30.0" }

@@ -7,7 +7,7 @@ use std::io::Read;
 
 #[cfg(feature = "pyth")]
 use {
-    pyth_sdk_solana::state::{PriceAccount, PriceComp, PriceInfo, PriceType, Rational},
+    pyth_sdk_solana::state::{PriceComp, PriceInfo, PriceType, Rational, SolanaPriceAccount},
     serde::{Deserialize, Serialize},
     solana_sdk::pubkey::Pubkey,
 };
@@ -40,11 +40,11 @@ pub fn calculate_chunk_size<F: Fn(u32, Vec<u8>) -> Instruction>(
 
 #[cfg(feature = "pyth")]
 #[derive(serde::Serialize)]
-pub struct PriceAccountWrapper<'a>(#[serde(with = "PriceAccountDef")] pub &'a PriceAccount);
+pub struct PriceAccountWrapper<'a>(#[serde(with = "PriceAccountDef")] pub &'a SolanaPriceAccount);
 
 #[cfg(feature = "pyth")]
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "PriceAccount")]
+#[serde(remote = "SolanaPriceAccount")]
 #[repr(C)]
 pub struct PriceAccountDef {
     /// pyth magic number
@@ -97,4 +97,6 @@ pub struct PriceAccountDef {
     pub agg: PriceInfo,
     /// price components one per quoter
     pub comp: [PriceComp; 32],
+    /// additional extended account data
+    pub extended: (),
 }

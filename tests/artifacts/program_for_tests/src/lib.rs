@@ -1,7 +1,6 @@
-#![allow(deprecated)]
-// #region code
 use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
+use std::ops::DerefMut;
 
 declare_id!("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr");
 
@@ -9,39 +8,66 @@ declare_id!("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr");
 pub mod basic_4 {
     use super::*;
 
-    #[state]
-    pub struct Counter {
-        pub authority: Pubkey,
-        pub count: u64,
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        let counter = ctx.accounts.counter.deref_mut();
+        let bump = ctx.bumps.counter;
+
+        *counter = Counter {
+            authority: *ctx.accounts.authority.key,
+            count: 0,
+            bump,
+        };
+
+        Ok(())
     }
 
-    impl Counter {
-        pub fn new(ctx: Context<Auth>) -> anchor_lang::Result<Self> {
-            Ok(Self {
-                authority: *ctx.accounts.authority.key,
-                count: 0,
-            })
-        }
+    pub fn increment(ctx: Context<Increment>) -> Result<()> {
+        require_keys_eq!(
+            ctx.accounts.authority.key(),
+            ctx.accounts.counter.authority,
+            ErrorCode::Unauthorized
+        );
 
-        pub fn increment(&mut self, ctx: Context<Auth>) -> anchor_lang::Result<()> {
-            if &self.authority != ctx.accounts.authority.key {
-                return Err(error!(ErrorCode::Unauthorized));
-            }
-            self.count += 1;
-            Ok(())
-        }
+        ctx.accounts.counter.count += 1;
+        Ok(())
     }
 }
 
 #[derive(Accounts)]
-pub struct Auth<'info> {
+pub struct Initialize<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = Counter::SIZE,
+        seeds = [b"counter"],
+        bump
+    )]
+    counter: Account<'info, Counter>,
+    #[account(mut)]
+    authority: Signer<'info>,
+    system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Increment<'info> {
+    #[account(
+        mut,
+        seeds = [b"counter"],
+        bump = counter.bump
+    )]
+    counter: Account<'info, Counter>,
     authority: Signer<'info>,
 }
-// #endregion code
+
 #[account]
-#[derive(Debug)]
-pub struct CountTracker {
+pub struct Counter {
+    pub authority: Pubkey,
     pub count: u64,
+    pub bump: u8,
+}
+
+impl Counter {
+    pub const SIZE: usize = 8 + 32 + 8 + 1;
 }
 
 #[error_code]
@@ -50,6 +76,13 @@ pub enum ErrorCode {
     Unauthorized,
 }
 
+#[account]
+#[derive(Debug)]
+pub struct CountTracker {
+    pub count: u64,
+}
+
+// #[derive(BorshSer, BorshDes, Debug)]
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct GreetingAccount {
     /// number of greetings
