@@ -23,7 +23,9 @@ pub use solana_banks_client::{BanksClient, BanksClientError};
 mod banks_client;
 mod rpc_client;
 
+#[allow(unused_imports)]
 pub use banks_client::*;
+#[allow(unused_imports)]
 pub use rpc_client::*;
 
 use crate::util;
