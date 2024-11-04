@@ -10,7 +10,7 @@ use {
     spl_token::state::Mint,
 };
 
-use solana_test_validator::{ProgramInfo, TestValidatorGenesis};
+use solana_test_validator::{TestValidatorGenesis, UpgradeableProgramInfo};
 
 use spl_token::state::Account as TokenAccount;
 
@@ -22,10 +22,11 @@ async fn transaction_from_instructions() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
         loader: solana_sdk::bpf_loader::id(),
         program_path: std::path::PathBuf::from(program_path),
+        upgrade_authority: Pubkey::default(),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
@@ -66,10 +67,11 @@ async fn create_account() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
         loader: solana_sdk::bpf_loader::id(),
         program_path: std::path::PathBuf::from(program_path),
+        upgrade_authority: Pubkey::default(),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
@@ -93,10 +95,11 @@ async fn create_token_mint() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
         loader: solana_sdk::bpf_loader::id(),
         program_path: std::path::PathBuf::from(program_path),
+        upgrade_authority: Pubkey::default(),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
@@ -131,10 +134,11 @@ async fn create_token_account() {
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
     let program_path = "tests/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
         loader: solana_sdk::bpf_loader::id(),
         program_path: std::path::PathBuf::from(program_path),
+        upgrade_authority: Pubkey::default(),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
@@ -178,10 +182,11 @@ async fn create_associated_token_account() {
     let program_path = "tests/artifacts/program_for_tests.so";
     let token_program_id = spl_token::ID; //could also use token-2022 ID
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
         loader: solana_sdk::bpf_loader::id(),
         program_path: std::path::PathBuf::from(program_path),
+        upgrade_authority: Pubkey::default(),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
@@ -236,7 +241,7 @@ async fn deploy_program() {
 
     assert_eq!(
         deployed_program_account.owner,
-        Pubkey::from_str("BPFLoader2111111111111111111111111111111111").unwrap()
+        Pubkey::from_str("BPFLoaderUpgradeab1e11111111111111111111111").unwrap()
     );
 }
 

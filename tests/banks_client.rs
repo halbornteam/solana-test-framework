@@ -269,7 +269,7 @@ async fn deploy_program() {
 
     assert_eq!(
         deployed_program_account.owner,
-        Pubkey::from_str("BPFLoader2111111111111111111111111111111111").unwrap()
+        Pubkey::from_str("BPFLoaderUpgradeab1e11111111111111111111111").unwrap()
     );
 }
 
