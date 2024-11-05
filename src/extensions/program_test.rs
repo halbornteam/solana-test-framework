@@ -23,7 +23,7 @@ use anchor_lang::{AnchorSerialize, Discriminator};
 #[cfg(feature = "pyth")]
 use {
     crate::util::PriceAccountWrapper,
-    pyth_sdk_solana::state::{PriceAccount, PriceInfo},
+    pyth_sdk_solana::state::{PriceInfo, SolanaPriceAccount},
     solana_program_test::BanksClientError,
 };
 
@@ -79,6 +79,7 @@ pub trait ProgramTestExtension {
     );
 
     /// Adds an SPL Token account to the test environment.
+    #[allow(clippy::too_many_arguments)]
     fn add_token_account(
         &mut self,
         pubkey: Pubkey,
@@ -93,6 +94,7 @@ pub trait ProgramTestExtension {
 
     /// Adds an associated token account to the test environment.
     /// Returns the address of the created account.
+    #[allow(clippy::too_many_arguments)]
     fn add_associated_token_account(
         &mut self,
         mint: Pubkey,
@@ -114,15 +116,15 @@ pub trait ProgramTestExtension {
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
-     /// Adds a BPF program to the test environment.
-    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account 
+    /// Adds a BPF program to the test environment.
+    /// The program is upgradeable if `Some` `program_authority` and then providing the  program data account
     /// This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
     fn add_bpf_program_with_program_data(
         &mut self,
         program_name: &str,
         program_id: Pubkey,
         program_authority: Option<Pubkey>,
-        program_data: Pubkey, 
+        program_data: Pubkey,
         process_instruction: Option<BuiltinFunctionWithContext>,
     );
 
@@ -132,7 +134,7 @@ pub trait ProgramTestExtension {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
     ) -> Result<(), BanksClientError>;
@@ -178,7 +180,7 @@ impl ProgramTestExtension for ProgramTest {
         anchor_data: T,
         executable: bool,
     ) {
-        let discriminator = &T::discriminator();
+        let discriminator = &T::DISCRIMINATOR;
         let data = anchor_data
             .try_to_vec()
             .expect("Cannot serialize provided anchor account");
@@ -188,7 +190,7 @@ impl ProgramTestExtension for ProgramTest {
         self.add_account_with_data(pubkey, owner, &v, executable);
     }
 
-    //Note that the total size is 8 (disciminator) + size
+    //Note that the total size is 8 (discriminator) + size
     #[cfg(feature = "anchor")]
     fn add_empty_account_with_anchor<T: AnchorSerialize + Discriminator>(
         &mut self,
@@ -196,7 +198,7 @@ impl ProgramTestExtension for ProgramTest {
         owner: Pubkey,
         size: usize,
     ) {
-        let discriminator = &T::discriminator();
+        let discriminator = &T::DISCRIMINATOR;
         let data = vec![0_u8; size];
         let mut v = Vec::new();
         v.extend_from_slice(discriminator);
@@ -466,28 +468,26 @@ impl ProgramTestExtension for ProgramTest {
         &mut self,
         oracle: Pubkey,
         program_id: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
     ) -> Result<(), BanksClientError> {
         let data = if let Some(price_account) = price_account {
             bincode::serialize(&PriceAccountWrapper(&price_account)).unwrap()
         } else if let (Some(price_info), Some(timestamp)) = (price_info, timestamp) {
-            bincode::serialize(&PriceAccountWrapper(
-                &pyth_sdk_solana::state::PriceAccount {
-                    magic: 0xa1b2c3d4,
-                    ver: 2,
-                    expo: 5,
-                    atype: 3,
-                    agg: price_info,
-                    timestamp,
-                    prev_timestamp: 100,
-                    prev_price: 60,
-                    prev_conf: 70,
-                    prev_slot: 1,
-                    ..Default::default()
-                },
-            ))
+            bincode::serialize(&PriceAccountWrapper(&SolanaPriceAccount {
+                magic: 0xa1b2c3d4,
+                ver: 2,
+                expo: 5,
+                atype: 3,
+                agg: price_info,
+                timestamp,
+                prev_timestamp: 100,
+                prev_price: 60,
+                prev_conf: 70,
+                prev_slot: 1,
+                ..Default::default()
+            }))
             .unwrap()
         } else {
             return Err(BanksClientError::ClientError(

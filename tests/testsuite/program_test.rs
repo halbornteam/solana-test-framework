@@ -15,10 +15,9 @@ use borsh::BorshDeserialize;
 #[cfg(feature = "anchor")]
 use {anchor_lang::AccountDeserialize, program_for_tests::CountTracker};
 
+use crate::helpers;
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::{PriceAccount, PriceInfo, PriceStatus};
-
-mod helpers;
+use pyth_sdk_solana::state::{PriceInfo, PriceStatus, SolanaPriceAccount};
 
 #[tokio::test]
 async fn generate_accounts() {
@@ -47,7 +46,8 @@ async fn add_account_with_data() {
 
     // USDC Mint from mainnet
     // got using solana account --output-file usdc_mint EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-    let (data, _) = solana_test_framework::util::load_file_to_bytes("tests/artifacts/usdc_mint");
+    let (data, _) =
+        solana_test_framework::util::load_file_to_bytes("tests/testsuite/artifacts/usdc_mint");
 
     program.add_account_with_data(acc_pubkey, owner, &data[..], false);
 
@@ -256,7 +256,7 @@ async fn add_pyth_price_feed() {
         pub_slot: 3,
         ..Default::default()
     };
-    let price_account = PriceAccount {
+    let price_account = SolanaPriceAccount {
         magic: 0xa1b2c3d4,
         ver: 2,
         expo: 5,

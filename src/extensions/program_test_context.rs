@@ -1,13 +1,14 @@
 use async_trait::async_trait;
-use solana_program::pubkey::Pubkey;
 use solana_program_test::{ProgramTestContext, ProgramTestError};
-use solana_sdk::{account::AccountSharedData, sysvar::clock::Clock};
+use solana_sdk::sysvar::clock::Clock;
 
 #[cfg(feature = "pyth")]
 use {
     crate::error::TestFrameWorkError,
     crate::util::PriceAccountWrapper,
-    pyth_sdk_solana::state::{PriceAccount, PriceInfo},
+    pyth_sdk_solana::state::{PriceInfo, SolanaPriceAccount},
+    solana_program::pubkey::Pubkey,
+    solana_sdk::account::AccountSharedData,
 };
 
 #[async_trait]
@@ -19,7 +20,7 @@ pub trait ProgramTestContextExtension {
     async fn update_pyth_oracle(
         &mut self,
         address: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
         valid_slots: Option<u64>,
@@ -63,7 +64,7 @@ impl ProgramTestContextExtension for ProgramTestContext {
     async fn update_pyth_oracle(
         &mut self,
         address: Pubkey,
-        price_account: Option<PriceAccount>,
+        price_account: Option<SolanaPriceAccount>,
         price_info: Option<PriceInfo>,
         timestamp: Option<i64>,
         valid_slot: Option<u64>,

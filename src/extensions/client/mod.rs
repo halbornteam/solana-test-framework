@@ -1,22 +1,17 @@
 use async_trait::async_trait;
 use borsh::BorshDeserialize;
-use futures::FutureExt;
-use solana_program::{
-    bpf_loader_upgradeable,
-    program_pack::Pack
-};
+use solana_program::{bpf_loader_upgradeable, program_pack::Pack};
 use solana_sdk::{
-    bpf_loader,
     instruction::Instruction,
-    loader_instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     system_transaction,
     sysvar::rent::Rent,
-    transaction::Transaction
+    transaction::Transaction,
 };
 use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account as create_associated_token_account_ix,
+    get_associated_token_address_with_program_id,
+    instruction::create_associated_token_account as create_associated_token_account_ix,
 };
 
 #[cfg(feature = "anchor")]
@@ -27,13 +22,15 @@ pub use solana_banks_client::{BanksClient, BanksClientError};
 mod banks_client;
 mod rpc_client;
 
+#[allow(unused_imports)]
 pub use banks_client::*;
+#[allow(unused_imports)]
 pub use rpc_client::*;
 
 use crate::util;
 
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::PriceAccount;
+use pyth_sdk_solana::state::SolanaPriceAccount;
 
 /// Convenience functions for clients
 #[async_trait]
@@ -68,12 +65,11 @@ pub trait ClientExtensions {
         unimplemented!();
     }
 
-
     #[cfg(feature = "pyth")]
     async fn get_pyth_price_account(
         &mut self,
         _address: Pubkey,
-    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
+    ) -> Result<SolanaPriceAccount, Box<dyn std::error::Error>> {
         unimplemented!();
     }
 
@@ -120,16 +116,6 @@ pub trait ClientExtensions {
         _payer: &Keypair,
         _token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
-        unimplemented!();
-    }
-
-    /// Deploy a program
-    async fn deploy_program(
-        &mut self,
-        _path_to_program: &str,
-        _program_keypair: &Keypair,
-        _payer: &Keypair,
-    ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!();
     }
 

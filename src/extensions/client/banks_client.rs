@@ -1,7 +1,7 @@
 use super::*;
 
 #[cfg(feature = "pyth")]
-use pyth_sdk_solana::state::PriceAccount;
+use pyth_sdk_solana::state::SolanaPriceAccount;
 
 #[async_trait]
 impl ClientExtensions for BanksClient {
@@ -26,35 +26,37 @@ impl ClientExtensions for BanksClient {
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account(address)
-            .map(|result| {
-                let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-                T::try_deserialize(&mut account.data.as_ref())
-                    .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
-            })
-            .await
-            .map_err(Into::into)
+        let account = self
+            .get_account(address)
+            .await?
+            .ok_or(BanksClientError::ClientError("Account not found"))?;
+        T::try_deserialize(&mut account.data.as_ref()).map_err(|_| {
+            Into::into(BanksClientError::ClientError(
+                "Failed to deserialize account",
+            ))
+        })
     }
 
     async fn get_account_with_borsh<T: BorshDeserialize>(
         &mut self,
         address: Pubkey,
     ) -> Result<T, Box<dyn std::error::Error>> {
-        self.get_account(address)
-            .map(|result| {
-                let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-                T::deserialize(&mut account.data.as_ref())
-                    .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
-            })
-            .await
-            .map_err(Into::into)
+        let account = self
+            .get_account(address)
+            .await?
+            .ok_or(BanksClientError::ClientError("Account not found"))?;
+        T::deserialize(&mut account.data.as_ref()).map_err(|_| {
+            Into::into(BanksClientError::ClientError(
+                "Failed to deserialize account",
+            ))
+        })
     }
 
     #[cfg(feature = "pyth")]
     async fn get_pyth_price_account(
         &mut self,
         address: Pubkey,
-    ) -> Result<PriceAccount, Box<dyn std::error::Error>> {
+    ) -> Result<SolanaPriceAccount, Box<dyn std::error::Error>> {
         let account = self.get_account(address).await?.unwrap();
 
         let price_account = pyth_sdk_solana::state::load_price_account(account.data.as_ref())
@@ -168,7 +170,8 @@ impl ClientExtensions for BanksClient {
         token_program_id: &Pubkey,
     ) -> Result<Pubkey, Box<dyn std::error::Error>> {
         let latest_blockhash = self.get_latest_blockhash().await?;
-        let associated_token_account = get_associated_token_address(account, mint);
+        let associated_token_account =
+            get_associated_token_address_with_program_id(account, mint, token_program_id);
         let ix =
             create_associated_token_account_ix(&payer.pubkey(), account, mint, token_program_id);
 
@@ -181,71 +184,6 @@ impl ClientExtensions for BanksClient {
         .await?;
 
         return Ok(associated_token_account);
-    }
-
-    async fn deploy_program(
-        &mut self,
-        path_to_program: &str,
-        program_keypair: &Keypair,
-        payer: &Keypair,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let (buffer, buffer_len) = util::load_file_to_bytes(path_to_program);
-
-        let program_data = buffer;
-
-        // multiply by 2 so program can be updated later on
-        let program_len = buffer_len;
-        let minimum_balance = Rent::default().minimum_balance(
-            bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
-                .expect("Cannot get program len"),
-        );
-        let latest_blockhash = self.get_latest_blockhash().await?;
-
-        // 1 Create account
-        self.process_transaction(system_transaction::create_account(
-            payer,
-            program_keypair,
-            latest_blockhash,
-            minimum_balance,
-            program_len as u64,
-            &bpf_loader::id(),
-        ))
-        .await
-        .unwrap();
-
-        // 2. Write to buffer
-        let deploy_ix = |offset: u32, bytes: Vec<u8>| {
-            loader_instruction::write(&program_keypair.pubkey(), &bpf_loader::id(), offset, bytes)
-        };
-
-        let chunk_size = util::calculate_chunk_size(deploy_ix, &vec![payer, program_keypair]);
-
-        for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
-            let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
-            let tx = self
-                .transaction_from_instructions(&[ix], payer, vec![payer, program_keypair])
-                .await
-                .unwrap();
-
-            self.process_transaction(tx).await?;
-        }
-
-        // 3. Finalize
-        let finalize_tx = self
-            .transaction_from_instructions(
-                &[loader_instruction::finalize(
-                    &program_keypair.pubkey(),
-                    &bpf_loader::id(),
-                )],
-                payer,
-                vec![payer, program_keypair],
-            )
-            .await
-            .unwrap();
-
-        self.process_transaction(finalize_tx).await?;
-
-        return Ok(());
     }
 
     async fn deploy_upgradable_program(
@@ -263,8 +201,7 @@ impl ClientExtensions for BanksClient {
         // multiply by 2 so program can be updated later on
         let program_len = buffer_len * 2;
         let minimum_balance = Rent::default().minimum_balance(
-            bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
-                .expect("Cannot get program len"),
+            bpf_loader_upgradeable::UpgradeableLoaderState::size_of_programdata(program_len),
         );
 
         // 1 Create buffer

@@ -29,5 +29,5 @@ pub fn add_payer(program: &mut ProgramTest) -> Keypair {
         },
     );
 
-    return payer;
+    payer
 }

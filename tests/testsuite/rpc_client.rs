@@ -10,7 +10,7 @@ use {
     spl_token::state::Mint,
 };
 
-use solana_test_validator::{ProgramInfo, TestValidatorGenesis};
+use solana_test_validator::{TestValidatorGenesis, UpgradeableProgramInfo};
 
 use spl_token::state::Account as TokenAccount;
 
@@ -20,16 +20,17 @@ use std::str::FromStr;
 async fn transaction_from_instructions() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
-    let program_path = "tests/artifacts/program_for_tests.so";
+    let program_path = "tests/testsuite/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
+        upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+    let mut rpc_client = test_validator.get_async_rpc_client();
 
     let acc_1 = Keypair::new();
     let acc_2 = Keypair::new();
@@ -53,9 +54,9 @@ async fn transaction_from_instructions() {
         .await
         .unwrap();
 
-    assert!(rpc_client.send_and_confirm_transaction(&tx).is_ok());
-    let acc1_data = rpc_client.get_account(&acc_1.pubkey()).unwrap();
-    let acc2_data = rpc_client.get_account(&acc_2.pubkey()).unwrap();
+    assert!(rpc_client.send_and_confirm_transaction(&tx).await.is_ok());
+    let acc1_data = rpc_client.get_account(&acc_1.pubkey()).await.unwrap();
+    let acc2_data = rpc_client.get_account(&acc_2.pubkey()).await.unwrap();
     assert_eq!(acc1_data.owner, acc_1.pubkey());
     assert_eq!(acc2_data.owner, acc_2.pubkey());
 }
@@ -64,16 +65,17 @@ async fn transaction_from_instructions() {
 async fn create_account() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
-    let program_path = "tests/artifacts/program_for_tests.so";
+    let program_path = "tests/testsuite/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
+        upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+    let mut rpc_client = test_validator.get_async_rpc_client();
 
     let lamports = 1_000_000;
     let new_acc = Keypair::new();
@@ -83,7 +85,7 @@ async fn create_account() {
         .await
         .unwrap();
 
-    let acc = rpc_client.get_account(&new_acc.pubkey()).unwrap();
+    let acc = rpc_client.get_account(&new_acc.pubkey()).await.unwrap();
     assert_eq!(acc.lamports, lamports);
 }
 
@@ -91,16 +93,17 @@ async fn create_account() {
 async fn create_token_mint() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
-    let program_path = "tests/artifacts/program_for_tests.so";
+    let program_path = "tests/testsuite/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
+        upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+    let mut rpc_client = test_validator.get_async_rpc_client();
 
     let mint = Keypair::new();
     let freeze_pubkey = Pubkey::new_unique();
@@ -118,7 +121,7 @@ async fn create_token_mint() {
         .await
         .unwrap();
     //Test mint with defaults creation
-    let mint_acc = rpc_client.get_account(&mint.pubkey()).unwrap();
+    let mint_acc = rpc_client.get_account(&mint.pubkey()).await.unwrap();
     let mint_data = Mint::unpack(&mint_acc.data).unwrap();
     assert_eq!(mint_data.freeze_authority.unwrap(), freeze_pubkey);
     assert_eq!(mint_data.decimals, decimals);
@@ -129,16 +132,17 @@ async fn create_token_mint() {
 async fn create_token_account() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
-    let program_path = "tests/artifacts/program_for_tests.so";
+    let program_path = "tests/testsuite/artifacts/program_for_tests.so";
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
+        upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+    let mut rpc_client = test_validator.get_async_rpc_client();
 
     let mint = Keypair::new();
     let freeze_pubkey = Pubkey::new_unique();
@@ -163,7 +167,10 @@ async fn create_token_account() {
         .await
         .unwrap();
 
-    let token_account = rpc_client.get_account(&token_account.pubkey()).unwrap();
+    let token_account = rpc_client
+        .get_account(&token_account.pubkey())
+        .await
+        .unwrap();
 
     let token_account_data = TokenAccount::unpack(&token_account.data).unwrap();
 
@@ -175,17 +182,18 @@ async fn create_token_account() {
 async fn create_associated_token_account() {
     let mut genesis_config = TestValidatorGenesis::default();
     let program_id = Pubkey::from_str("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr").unwrap();
-    let program_path = "tests/artifacts/program_for_tests.so";
+    let program_path = "tests/testsuite/artifacts/program_for_tests.so";
     let token_program_id = spl_token::ID; //could also use token-2022 ID
 
-    genesis_config.add_programs_with_path(&[ProgramInfo {
+    genesis_config.add_upgradeable_programs_with_path(&[UpgradeableProgramInfo {
         program_id,
-        loader: solana_sdk::bpf_loader::id(),
+        loader: solana_sdk::bpf_loader_upgradeable::id(),
+        upgrade_authority: Default::default(),
         program_path: std::path::PathBuf::from(program_path),
     }]);
 
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+    let mut rpc_client = test_validator.get_async_rpc_client();
 
     let mint = Keypair::new();
     let freeze_pubkey = Pubkey::new_unique();
@@ -208,7 +216,7 @@ async fn create_associated_token_account() {
         .await
         .unwrap();
 
-    let token_account = rpc_client.get_account(&token_account).unwrap();
+    let token_account = rpc_client.get_account(&token_account).await.unwrap();
 
     let token_account_data = TokenAccount::unpack(&token_account.data).unwrap();
 
@@ -217,34 +225,10 @@ async fn create_associated_token_account() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn deploy_program() {
-    let genesis_config = TestValidatorGenesis::default();
-    let program_keypair = Keypair::new();
-
-    let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
-
-    rpc_client
-        .deploy_program(
-            "tests/artifacts/program_for_tests.so",
-            &program_keypair,
-            &payer,
-        )
-        .await
-        .unwrap();
-    let deployed_program_account = rpc_client.get_account(&program_keypair.pubkey()).unwrap();
-
-    assert_eq!(
-        deployed_program_account.owner,
-        Pubkey::from_str("BPFLoader2111111111111111111111111111111111").unwrap()
-    );
-}
-
-#[tokio::test(flavor = "multi_thread")]
 async fn deploy_upgradable_program() {
     let genesis_config = TestValidatorGenesis::default();
     let (test_validator, payer) = genesis_config.start_async().await;
-    let mut rpc_client = test_validator.get_rpc_client();
+    let mut rpc_client = test_validator.get_async_rpc_client();
 
     let program_keypair = Keypair::new();
     let buffer_keypair = Keypair::new();
@@ -252,7 +236,7 @@ async fn deploy_upgradable_program() {
 
     rpc_client
         .deploy_upgradable_program(
-            "tests/artifacts/program_for_tests.so",
+            "tests/testsuite/artifacts/program_for_tests.so",
             &buffer_keypair,
             &buffer_authority_signer,
             &program_keypair,
@@ -260,7 +244,10 @@ async fn deploy_upgradable_program() {
         )
         .await
         .unwrap();
-    let deployed_program_account = rpc_client.get_account(&program_keypair.pubkey()).unwrap();
+    let deployed_program_account = rpc_client
+        .get_account(&program_keypair.pubkey())
+        .await
+        .unwrap();
 
     assert_eq!(
         deployed_program_account.owner,

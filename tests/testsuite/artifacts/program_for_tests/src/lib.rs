@@ -9,7 +9,7 @@ declare_id!("CwrqeMj2U8tFr1Rhkgwc84tpAsqbt9pTt2a4taoTADPr");
 pub mod basic_4 {
     use super::*;
 
-    #[state]
+    #[account]
     pub struct Counter {
         pub authority: Pubkey,
         pub count: u64,
