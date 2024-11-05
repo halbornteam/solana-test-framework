@@ -10,10 +10,7 @@ use solana_sdk::{
     sysvar::rent::Rent,
     transaction::Transaction,
 };
-use spl_associated_token_account::{
-    get_associated_token_address,
-    instruction::create_associated_token_account as create_associated_token_account_ix,
-};
+use spl_associated_token_account::instruction::create_associated_token_account as create_associated_token_account_ix;
 
 #[cfg(feature = "anchor")]
 use anchor_lang::AccountDeserialize;
@@ -32,6 +29,8 @@ use crate::util;
 
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::SolanaPriceAccount;
+
+use super::MintExtensions;
 
 /// Convenience functions for clients
 #[async_trait]
@@ -94,6 +93,19 @@ pub trait ClientExtensions {
         _freeze_authority: Option<&Pubkey>,
         _decimals: u8,
         _payer: &Keypair,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        unimplemented!();
+    }
+
+    /// Create a new SPL Token Mint account
+    async fn create_token2022_mint(
+        &mut self,
+        _mint: &Keypair,
+        _authority: &Pubkey,
+        _freeze_authority: Option<&Pubkey>,
+        _decimals: u8,
+        _payer: &Keypair,
+        _extensions: Option<&MintExtensions>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!();
     }

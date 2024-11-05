@@ -1,8 +1,14 @@
+use crate::MintExtensions;
+
 use super::*;
 
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::SolanaPriceAccount;
+use solana_sdk::system_instruction;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
+use spl_token_2022::{
+    extension::ExtensionType, instruction::initialize_mint_close_authority, state::Mint,
+};
 
 #[async_trait]
 impl ClientExtensions for BanksClient {
@@ -118,6 +124,87 @@ impl ClientExtensions for BanksClient {
             &[ix],
             Some(&payer.pubkey()),
             &[payer],
+            latest_blockhash,
+        ))
+        .await
+        .map_err(Into::into)
+    }
+
+    async fn create_token2022_mint(
+        &mut self,
+        mint: &Keypair,
+        authority: &Pubkey,
+        freeze_authority: Option<&Pubkey>,
+        decimals: u8,
+        payer: &Keypair,
+        extensions: Option<&MintExtensions>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Mint extensions currently include:
+        // - confidential transfers
+        // - transfer fees
+        // - closing mint
+        // - interest-bearing tokens
+        // - non-transferable tokens
+        // - permanent delegate
+        // - transfer hook
+        // - metadata pointer
+        // - metadata
+        //
+        // Account extensions currently include:
+        // - memo required on incoming transfers
+        // - immutable ownership
+        // - default account state
+        // - CPI guard
+
+        let (space, mut ext_ixs) = if let Some(extensions) = extensions {
+            (
+                extensions.try_calculate_mint_account_length()?,
+                extensions.get_init_ixs(&mint.pubkey())?,
+            )
+        } else {
+            (
+                ExtensionType::try_calculate_account_len::<Mint>(&[])?,
+                vec![],
+            )
+        };
+        // let close_authority = Keypair::new();
+        // let space =
+        //     ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::MintCloseAuthority])
+        //         .unwrap();
+        let rent_required = Rent::default().minimum_balance(space);
+
+        let latest_blockhash = self.get_latest_blockhash().await?;
+        let create_ix = system_instruction::create_account(
+            &payer.pubkey(),
+            &mint.pubkey(),
+            rent_required,
+            space as u64,
+            &spl_token_2022::id(),
+        );
+
+        // let initialize_close_authority_ix = initialize_mint_close_authority(
+        //     &spl_token_2022::id(),
+        //     &mint.pubkey(),
+        //     Some(&close_authority.pubkey()),
+        // )
+        // .unwrap();
+        let initialize_mint_ix = spl_token_2022::instruction::initialize_mint(
+            &spl_token_2022::id(),
+            &mint.pubkey(),
+            authority,
+            freeze_authority,
+            decimals,
+        )
+        .unwrap();
+
+        let mut ixs = vec![create_ix];
+        ixs.append(&mut ext_ixs);
+        ixs.push(initialize_mint_ix);
+
+        self.process_transaction(Transaction::new_signed_with_payer(
+            &ixs,
+            Some(&payer.pubkey()),
+            &[payer, mint],
             latest_blockhash,
         ))
         .await
