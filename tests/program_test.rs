@@ -179,6 +179,29 @@ async fn add_token_mint() {
 }
 
 #[tokio::test]
+// #[cfg(feature = "pyth")]
+async fn add_token2022_mint() {
+    let (mut program, _) = helpers::add_program();
+
+    let freeze_pubkey = Pubkey::new_unique();
+    let mint_pubkey = Pubkey::new_unique();
+    //Create mint with defaults
+    program.add_token_mint(mint_pubkey, None, 10, 0, Some(freeze_pubkey));
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    //Test mint with defaults creation
+    let mint_acc = banks_client
+        .get_account(mint_pubkey)
+        .await
+        .unwrap()
+        .unwrap();
+    let mint_data = Mint::unpack(&mint_acc.data).unwrap();
+    assert_eq!(mint_data.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_acc.owner, spl_token::id());
+}
+
+#[tokio::test]
 async fn add_token_account() {
     let (mut program, _) = helpers::add_program();
 
