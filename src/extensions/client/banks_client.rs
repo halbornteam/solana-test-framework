@@ -1,5 +1,3 @@
-use crate::MintExtensions;
-
 use super::*;
 
 #[cfg(feature = "pyth")]

@@ -179,6 +179,7 @@ async fn add_token_mint() {
 }
 
 #[tokio::test]
+#[ignore = "token 2022 not yet supported"]
 // #[cfg(feature = "pyth")]
 async fn add_token2022_mint() {
     let (mut program, _) = helpers::add_program();

@@ -194,19 +194,29 @@ async fn create_token_mint() {
 }
 
 #[tokio::test]
+#[ignore = "Moved to token_extensions test suite"]
 async fn create_token2022_mint() {
     let (mut program, _) = helpers::add_program();
     let payer = helpers::add_payer(&mut program);
     let mint = Keypair::new();
     let close_authority = Keypair::new();
     let freeze_pubkey = Pubkey::new_unique();
+    let fee_withdraw_authority = Pubkey::new_unique();
+    let transfer_fee_config_authority = Pubkey::new_unique();
     let decimals = 0;
+    let fee_basis_points = 20;
+    let maximum_fee = 50000;
 
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
 
     let mut extensions = MintExtensions::new();
     extensions.add_mint_close_authority(close_authority.pubkey());
-    extensions.add_transfer_fee(20, 50000, None, None);
+    extensions.add_transfer_fee(
+        fee_basis_points,
+        maximum_fee,
+        Some(transfer_fee_config_authority),
+        Some(fee_withdraw_authority),
+    );
 
     //Create mint with defaults
     banks_client
@@ -241,10 +251,24 @@ async fn create_token2022_mint() {
         close_authority.pubkey()
     );
     let transfer_fee_ext = mint_data.get_extension::<TransferFeeConfig>().unwrap();
-    // assert_eq!(
-    //     transfer_fee_ext.fee
-    //     close_authority.pubkey()
-    // );
+    assert_eq!(
+        transfer_fee_ext
+            .newer_transfer_fee
+            .transfer_fee_basis_points,
+        fee_basis_points.into()
+    );
+    assert_eq!(
+        transfer_fee_ext.newer_transfer_fee.maximum_fee,
+        maximum_fee.into()
+    );
+    assert_eq!(
+        transfer_fee_ext.transfer_fee_config_authority.0,
+        transfer_fee_config_authority
+    );
+    assert_eq!(
+        transfer_fee_ext.withdraw_withheld_authority.0,
+        fee_withdraw_authority
+    );
 }
 
 #[tokio::test]

@@ -30,7 +30,7 @@ use crate::util;
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::SolanaPriceAccount;
 
-use super::MintExtensions;
+use super::mint_extensions::MintExtensions;
 
 /// Convenience functions for clients
 #[async_trait]
