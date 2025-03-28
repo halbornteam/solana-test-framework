@@ -1,14 +1,15 @@
 use solana_test_framework::*;
 use spl_token_2022::extension::{
-    interest_bearing_mint::InterestBearingConfig, mint_close_authority::MintCloseAuthority,
-    permanent_delegate::PermanentDelegate, transfer_fee::TransferFeeConfig,
-    BaseStateWithExtensions, StateWithExtensions,
+    interest_bearing_mint::InterestBearingConfig, metadata_pointer::MetadataPointer,
+    mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
+    transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
 };
 
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
+use spl_token_metadata_interface::state::TokenMetadata;
 
 mod helpers;
 
@@ -259,6 +260,125 @@ async fn create_token2022_mint_with_interest_bearing_ext() {
     let interest_bearing_ext = mint_data.get_extension::<InterestBearingConfig>().unwrap();
     assert_eq!(interest_bearing_ext.rate_authority.0, rate_authority);
     assert_eq!(interest_bearing_ext.current_rate, rate.into());
+}
+
+#[tokio::test]
+async fn create_token2022_mint_with_metadata_pointer_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+    let metadata_address = Pubkey::new_unique();
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    let mut extensions = MintExtensions::new();
+    let meta_data_pointer = TokenMetadataPointerConfig {
+        update_authority: Some(payer.pubkey()),
+        metadata_address,
+    };
+    extensions.add_metadata_pointer(meta_data_pointer);
+
+    //Create mint with defaults
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    //Test mint with defaults creation
+    let mint_acc = banks_client
+        .get_account(mint.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mint_data =
+        StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_acc.data).unwrap();
+    let mint_data_base = mint_data.base;
+    assert_eq!(mint_data_base.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_data_base.decimals, decimals);
+    assert_eq!(mint_acc.owner, spl_token_2022::id());
+
+    let metadata_pointer_ext = mint_data.get_extension::<MetadataPointer>().unwrap();
+    assert_eq!(metadata_pointer_ext.metadata_address.0, metadata_address);
+    assert_eq!(metadata_pointer_ext.authority.0, payer.pubkey());
+}
+
+#[tokio::test]
+async fn create_token2022_mint_with_metadata_account_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+
+    let name = String::from("my new token");
+    let symbol = String::from("MNT");
+    let uri = String::from("some uri");
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    let mut extensions = MintExtensions::new();
+    let metadata_config = TokenMetadataConfig {
+        update_authority: Some(payer.pubkey()),
+        mint: mint.pubkey(),
+        mint_authority: payer.pubkey(),
+        name,
+        symbol,
+        uri,
+        additional_metadata: vec![],
+    };
+    extensions.add_metadata_account(metadata_config);
+    // let meta_data_pointer = TokenMetadataPointerConfig {
+    //     update_authority: Some(payer.pubkey()),
+    //     metadata_address,
+    // };
+    // extensions.add_metadata_pointer(meta_data_pointer);
+
+    //Create mint with defaults
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    //Test mint with defaults creation
+    let mint_acc = banks_client
+        .get_account(mint.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mint_data =
+        StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_acc.data).unwrap();
+    let mint_data_base = mint_data.base;
+    assert_eq!(mint_data_base.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_data_base.decimals, decimals);
+    assert_eq!(mint_acc.owner, spl_token_2022::id());
+
+    let metadata_pointer_ext = mint_data.get_extension::<MetadataPointer>().unwrap();
+    assert_eq!(metadata_pointer_ext.metadata_address.0, mint.pubkey());
+    assert_eq!(metadata_pointer_ext.authority.0, payer.pubkey());
+
+    // This is commented because the TokenMetadata extension does not implement the Extension trait in the early versions for Solana 1.18
+    // An upgrade to Solana 2.0 is necessary
+    // let metadata_ext = mint_data.get_extension::<TokenMetadata>().unwrap();
+    // assert_eq!(metadata_ext.name, name);
+    // assert_eq!(metadata_ext.symbol, symbol);
+    // assert_eq!(metadata_ext.uri, uri);
 }
 
 #[tokio::test]

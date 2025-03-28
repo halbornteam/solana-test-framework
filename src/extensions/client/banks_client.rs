@@ -154,23 +154,23 @@ impl ClientExtensions for BanksClient {
         // - default account state
         // - CPI guard
 
-        let (space, mut ext_ixs) = if let Some(extensions) = extensions {
-            (
-                extensions.try_calculate_mint_account_length()?,
-                extensions.get_init_ixs(&mint.pubkey())?,
-            )
-        } else {
-            (
-                ExtensionType::try_calculate_account_len::<Mint>(&[])?,
-                vec![],
-            )
-        };
-        // let close_authority = Keypair::new();
-        // let space =
-        //     ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::MintCloseAuthority])
-        //         .unwrap();
-        let rent_required = Rent::default().minimum_balance(space);
-
+        let (space, mut pre_ext_ixs, mut post_ext_ixs, rent_required) =
+            if let Some(extensions) = extensions {
+                (
+                    extensions.try_calculate_mint_account_length()?,
+                    extensions.get_ixs_pre_mint(&mint.pubkey())?,
+                    extensions.get_ixs_post_mint(&mint.pubkey())?,
+                    extensions.get_minimal_balance_for_rent()?,
+                )
+            } else {
+                let space = ExtensionType::try_calculate_account_len::<Mint>(&[])?;
+                (
+                    space,
+                    vec![],
+                    vec![],
+                    Rent::default().minimum_balance(space),
+                )
+            };
         let latest_blockhash = self.get_latest_blockhash().await?;
         let create_ix = system_instruction::create_account(
             &payer.pubkey(),
@@ -180,12 +180,6 @@ impl ClientExtensions for BanksClient {
             &spl_token_2022::id(),
         );
 
-        // let initialize_close_authority_ix = initialize_mint_close_authority(
-        //     &spl_token_2022::id(),
-        //     &mint.pubkey(),
-        //     Some(&close_authority.pubkey()),
-        // )
-        // .unwrap();
         let initialize_mint_ix = spl_token_2022::instruction::initialize_mint(
             &spl_token_2022::id(),
             &mint.pubkey(),
@@ -196,8 +190,9 @@ impl ClientExtensions for BanksClient {
         .unwrap();
 
         let mut ixs = vec![create_ix];
-        ixs.append(&mut ext_ixs);
+        ixs.append(&mut pre_ext_ixs);
         ixs.push(initialize_mint_ix);
+        ixs.append(&mut post_ext_ixs);
 
         self.process_transaction(Transaction::new_signed_with_payer(
             &ixs,

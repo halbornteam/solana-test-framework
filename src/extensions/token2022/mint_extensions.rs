@@ -1,11 +1,16 @@
-use solana_sdk::{instruction::Instruction, program_error::ProgramError, pubkey::Pubkey};
+use solana_sdk::{
+    instruction::Instruction, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+};
 use spl_token_2022::{
     extension::interest_bearing_mint::instruction::initialize as initialize_interest_bearing_mint_config,
+    extension::metadata_pointer::instruction::initialize as initialize_metadata_pointer,
     extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
     instruction::initialize_mint_close_authority,
     instruction::initialize_non_transferable_mint,
     instruction::initialize_permanent_delegate,
 };
+use spl_token_metadata_interface::instruction::initialize as initialize_metadata_account;
+use spl_token_metadata_interface::state::TokenMetadata;
 
 #[derive(Default)]
 pub struct MintExtensions {
@@ -14,7 +19,8 @@ pub struct MintExtensions {
     interest_bearing: Option<InitializeInterestBearingConfig>,
     non_transferable: Option<()>,
     permanent_delegate: Option<Pubkey>,
-    // metadata_pointer / metadata
+    metadata_pointer: Option<TokenMetadataPointerConfig>,
+    metadata: Option<TokenMetadataConfig>,
     // group_pointer / group
     // member_pointer / member
     // scaled_ui_amount
@@ -39,6 +45,30 @@ struct InitializeInterestBearingConfig {
     rate_authority: Option<Pubkey>,
     /// Interest rate basis points
     rate: i16,
+}
+
+pub struct TokenMetadataPointerConfig {
+    pub update_authority: Option<Pubkey>,
+    pub metadata_address: Pubkey,
+}
+
+pub struct TokenMetadataConfig {
+    /// The authority that can sign to update the metadata
+    pub update_authority: Option<Pubkey>,
+    /// The associated mint, used to counter spoofing to be sure that metadata
+    /// belongs to a particular mint
+    pub mint: Pubkey,
+    /// The associated mint authority
+    pub mint_authority: Pubkey,
+    /// The longer name of the token
+    pub name: String,
+    /// The shortened symbol for the token
+    pub symbol: String,
+    /// The URI pointing to richer metadata
+    pub uri: String,
+    /// Any additional metadata about the token as key-value pairs. The program
+    /// must avoid storing the same key twice.
+    pub additional_metadata: Vec<(String, String)>,
 }
 
 impl MintExtensions {
@@ -103,6 +133,35 @@ impl MintExtensions {
         self
     }
 
+    /// Adds metadata pointer extension. This extension points to an external metadata account.
+    /// To use the mint as metadata account, use the `add_metadata_account` method.
+    ///
+    /// - `meta_data_pointer`: Contains information about the meta data pointer configuration
+    pub fn add_metadata_pointer<'a>(
+        &'a mut self,
+        meta_data_pointer: TokenMetadataPointerConfig,
+    ) -> &'a mut MintExtensions {
+        // Set the metadata pointer to the mint account itself
+        self.metadata_pointer = Some(meta_data_pointer);
+        self
+    }
+
+    /// Adds metadata account extension. This extension extends the mint account and adds the metadata directly into the mint.
+    ///
+    /// - `meta_data`: Contains information about the meta data account
+    pub fn add_metadata_account<'a>(
+        &'a mut self,
+        meta_data_config: TokenMetadataConfig,
+    ) -> &'a mut MintExtensions {
+        // Set the metadata pointer to the mint account itself
+        self.metadata_pointer = Some(TokenMetadataPointerConfig {
+            update_authority: meta_data_config.update_authority,
+            metadata_address: meta_data_config.mint,
+        });
+        self.metadata = Some(meta_data_config);
+        self
+    }
+
     /// Calculates mint account data length with all added extensions.
     ///
     /// Fails if any of the extension types has a variable length
@@ -123,12 +182,34 @@ impl MintExtensions {
         if let Some(_) = self.interest_bearing {
             extension_types.push(ExtensionType::InterestBearingConfig);
         }
+        if let Some(_) = self.metadata_pointer {
+            extension_types.push(ExtensionType::MetadataPointer);
+        }
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)
+    }
+
+    /// Returns the minimal balance for rent exemption.
+    /// This method also adds necessary lamports if the mint will contain token metadata.
+    pub fn get_minimal_balance_for_rent(&self) -> Result<u64, ProgramError> {
+        let mut space = self.try_calculate_mint_account_length()?;
+        if let Some(ref metadata_config) = self.metadata {
+            space += TokenMetadata {
+                update_authority: metadata_config.update_authority.clone().try_into()?,
+                mint: metadata_config.mint,
+                name: metadata_config.name.clone(),
+                symbol: metadata_config.symbol.clone(),
+                uri: metadata_config.uri.clone(),
+                additional_metadata: metadata_config.additional_metadata.clone(),
+            }
+            .tlv_size_of()?
+                + 4; // Size of MetadataExtension 2 bytes for type, 2 bytes for length
+        }
+        Ok(Rent::default().minimum_balance(space))
     }
 
     /// Returns vector of instructions to initialize all added extensions.
     /// These instructions must be invoked before the mint account initialization.
-    pub fn get_init_ixs(&self, mint: &Pubkey) -> Result<Vec<Instruction>, ProgramError> {
+    pub fn get_ixs_pre_mint(&self, mint: &Pubkey) -> Result<Vec<Instruction>, ProgramError> {
         let mut ixs = Vec::new();
 
         if let Some(close_authority) = self.mint_close_authority {
@@ -171,6 +252,42 @@ impl MintExtensions {
             let ix = initialize_non_transferable_mint(&spl_token_2022::id(), mint)?;
             ixs.push(ix);
         }
+
+        if let Some(ref metadata_pointer_config) = self.metadata_pointer {
+            let ix = initialize_metadata_pointer(
+                &spl_token_2022::id(),
+                mint,
+                metadata_pointer_config.update_authority,
+                Some(metadata_pointer_config.metadata_address),
+            )?;
+            ixs.push(ix);
+        }
+
+        Ok(ixs)
+    }
+    /// Returns vector in instructions to be invoked after the mint account is created
+    pub fn get_ixs_post_mint(&self, mint: &Pubkey) -> Result<Vec<Instruction>, ProgramError> {
+        let mut ixs = Vec::new();
+
+        // In theory the mint could have the metadata and at the same time point to different external metadata account,
+        // so we will not verify if self.metadata_pointer corresponds to the mint pubkey and if it is set or not.
+        // However the current implementation does not allow to set mint metadata and then point the pointer to different account.
+        // This could be eveventually achieved later after the mint creation but then we do not care anymore.
+        if let Some(ref metadata_config) = self.metadata {
+            let ix = initialize_metadata_account(
+                &spl_token_2022::id(),
+                &mint,
+                &metadata_config.update_authority.unwrap_or_default(),
+                &mint,
+                &metadata_config.mint_authority,
+                metadata_config.name.clone(),
+                metadata_config.symbol.clone(),
+                metadata_config.uri.clone(),
+            );
+            ixs.push(ix);
+        }
+
+        // TODO set also the custom metadata
 
         Ok(ixs)
     }
