@@ -323,6 +323,16 @@ async fn create_token2022_mint_with_metadata_account_ext() {
     let name = String::from("my new token");
     let symbol = String::from("MNT");
     let uri = String::from("some uri");
+    let additional_metadata = vec![
+        (
+            String::from("some field name 1"),
+            String::from("some custom value"),
+        ),
+        (
+            String::from("some field name 2"),
+            String::from("some custom value"),
+        ),
+    ];
     let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
 
     let mut extensions = MintExtensions::new();
@@ -330,19 +340,10 @@ async fn create_token2022_mint_with_metadata_account_ext() {
         update_authority: Some(payer.pubkey()),
         mint: mint.pubkey(),
         mint_authority: payer.pubkey(),
-        name,
-        symbol,
-        uri,
-        additional_metadata: vec![
-            (
-                String::from("some field name 1"),
-                String::from("some custom value"),
-            ),
-            (
-                String::from("some field name 2"),
-                String::from("some custom value"),
-            ),
-        ],
+        name: name.clone(),
+        symbol: symbol.clone(),
+        uri: uri.clone(),
+        additional_metadata: additional_metadata.clone(),
     };
     extensions.add_metadata_account(metadata_config);
 
@@ -376,6 +377,24 @@ async fn create_token2022_mint_with_metadata_account_ext() {
     let metadata_pointer_ext = mint_data.get_extension::<MetadataPointer>().unwrap();
     assert_eq!(metadata_pointer_ext.metadata_address.0, mint.pubkey());
     assert_eq!(metadata_pointer_ext.authority.0, payer.pubkey());
+
+    let mut metadata_found = false;
+    // Iterate through extensions and find TokenMetadata manually
+    for extension in mint_data.get_extension_types().ok().unwrap() {
+        if extension == spl_token_2022::extension::ExtensionType::TokenMetadata {
+            metadata_found = true;
+            let metadata_ext = mint_data
+                .get_variable_len_extension::<TokenMetadata>()
+                .unwrap();
+            assert_eq!(metadata_ext.update_authority.0, payer.pubkey());
+            assert_eq!(metadata_ext.mint, mint.pubkey());
+            assert_eq!(metadata_ext.name, name);
+            assert_eq!(metadata_ext.symbol, symbol);
+            assert_eq!(metadata_ext.uri, uri);
+            assert_eq!(metadata_ext.additional_metadata, additional_metadata);
+        }
+    }
+    assert!(metadata_found);
 
     // This is commented because the TokenMetadata extension does not implement the Extension trait in the early versions for Solana 1.18
     // An upgrade to Solana 2.0 is necessary
