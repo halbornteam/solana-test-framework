@@ -9,8 +9,11 @@ use spl_token_2022::{
     instruction::initialize_non_transferable_mint,
     instruction::initialize_permanent_delegate,
 };
-use spl_token_metadata_interface::instruction::initialize as initialize_metadata_account;
+use spl_token_metadata_interface::instruction::update_field;
 use spl_token_metadata_interface::state::TokenMetadata;
+use spl_token_metadata_interface::{
+    instruction::initialize as initialize_metadata_account, state::Field,
+};
 
 #[derive(Default)]
 pub struct MintExtensions {
@@ -285,9 +288,21 @@ impl MintExtensions {
                 metadata_config.uri.clone(),
             );
             ixs.push(ix);
+            let mut custom_metadata_ixs: Vec<_> = metadata_config
+                .additional_metadata
+                .iter()
+                .map(|(field, value)| {
+                    update_field(
+                        &spl_token_2022::id(),
+                        &mint,
+                        &metadata_config.update_authority.unwrap_or_default(),
+                        Field::Key(field.clone()),
+                        value.clone(),
+                    )
+                })
+                .collect();
+            ixs.append(&mut custom_metadata_ixs);
         }
-
-        // TODO set also the custom metadata
 
         Ok(ixs)
     }

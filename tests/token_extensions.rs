@@ -333,14 +333,18 @@ async fn create_token2022_mint_with_metadata_account_ext() {
         name,
         symbol,
         uri,
-        additional_metadata: vec![],
+        additional_metadata: vec![
+            (
+                String::from("some field name 1"),
+                String::from("some custom value"),
+            ),
+            (
+                String::from("some field name 2"),
+                String::from("some custom value"),
+            ),
+        ],
     };
     extensions.add_metadata_account(metadata_config);
-    // let meta_data_pointer = TokenMetadataPointerConfig {
-    //     update_authority: Some(payer.pubkey()),
-    //     metadata_address,
-    // };
-    // extensions.add_metadata_pointer(meta_data_pointer);
 
     //Create mint with defaults
     banks_client
