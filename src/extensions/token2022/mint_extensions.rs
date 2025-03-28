@@ -2,6 +2,7 @@ use solana_sdk::{
     instruction::Instruction, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
 };
 use spl_token_2022::{
+    extension::group_pointer::instruction::initialize as initialize_group_pointer,
     extension::interest_bearing_mint::instruction::initialize as initialize_interest_bearing_mint_config,
     extension::metadata_pointer::instruction::initialize as initialize_metadata_pointer,
     extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
@@ -24,11 +25,14 @@ pub struct MintExtensions {
     permanent_delegate: Option<Pubkey>,
     metadata_pointer: Option<TokenMetadataPointerConfig>,
     metadata: Option<TokenMetadataConfig>,
+    group_pointer: Option<GroupPointerConfig>,
     // group_pointer / group
     // member_pointer / member
-    // scaled_ui_amount
-    // pausable
     // transfer_hook
+    //
+    // Introduced in spl-token-2022 v7.0.0 (solana 2.*)
+    // pausable
+    // scaled_ui_amount
 }
 
 struct InitializeTransferFeeConfig {
@@ -72,6 +76,11 @@ pub struct TokenMetadataConfig {
     /// Any additional metadata about the token as key-value pairs. The program
     /// must avoid storing the same key twice.
     pub additional_metadata: Vec<(String, String)>,
+}
+
+pub struct GroupPointerConfig {
+    pub update_authority: Option<Pubkey>,
+    pub group_address: Pubkey,
 }
 
 impl MintExtensions {
@@ -142,10 +151,10 @@ impl MintExtensions {
     /// - `meta_data_pointer`: Contains information about the meta data pointer configuration
     pub fn add_metadata_pointer<'a>(
         &'a mut self,
-        meta_data_pointer: TokenMetadataPointerConfig,
+        meta_data_pointer_config: TokenMetadataPointerConfig,
     ) -> &'a mut MintExtensions {
         // Set the metadata pointer to the mint account itself
-        self.metadata_pointer = Some(meta_data_pointer);
+        self.metadata_pointer = Some(meta_data_pointer_config);
         self
     }
 
@@ -162,6 +171,19 @@ impl MintExtensions {
             metadata_address: meta_data_config.mint,
         });
         self.metadata = Some(meta_data_config);
+        self
+    }
+
+    /// Adds group pointer extension. This extension points to an external group account.
+    /// To use the mint as metadata account, use the `add_group_account` method.
+    ///
+    /// - `group_pointer_config`: Contains information about the group pointer configuration
+    pub fn add_group_pointer<'a>(
+        &'a mut self,
+        group_pointer_config: GroupPointerConfig,
+    ) -> &'a mut MintExtensions {
+        // Set the metadata pointer to the mint account itself
+        self.group_pointer = Some(group_pointer_config);
         self
     }
 
@@ -187,6 +209,9 @@ impl MintExtensions {
         }
         if let Some(_) = self.metadata_pointer {
             extension_types.push(ExtensionType::MetadataPointer);
+        }
+        if let Some(_) = self.group_pointer {
+            extension_types.push(ExtensionType::GroupPointer);
         }
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)
     }
@@ -262,6 +287,16 @@ impl MintExtensions {
                 mint,
                 metadata_pointer_config.update_authority,
                 Some(metadata_pointer_config.metadata_address),
+            )?;
+            ixs.push(ix);
+        }
+
+        if let Some(ref group_pointer_config) = self.group_pointer {
+            let ix = initialize_group_pointer(
+                &spl_token_2022::id(),
+                mint,
+                group_pointer_config.update_authority,
+                Some(group_pointer_config.group_address),
             )?;
             ixs.push(ix);
         }

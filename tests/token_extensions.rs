@@ -1,8 +1,9 @@
 use solana_test_framework::*;
 use spl_token_2022::extension::{
-    interest_bearing_mint::InterestBearingConfig, metadata_pointer::MetadataPointer,
-    mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
-    transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
+    group_pointer::GroupPointer, interest_bearing_mint::InterestBearingConfig,
+    metadata_pointer::MetadataPointer, mint_close_authority::MintCloseAuthority,
+    permanent_delegate::PermanentDelegate, transfer_fee::TransferFeeConfig,
+    BaseStateWithExtensions, StateWithExtensions,
 };
 
 use solana_sdk::{
@@ -402,6 +403,56 @@ async fn create_token2022_mint_with_metadata_account_ext() {
     // assert_eq!(metadata_ext.name, name);
     // assert_eq!(metadata_ext.symbol, symbol);
     // assert_eq!(metadata_ext.uri, uri);
+}
+
+#[tokio::test]
+async fn create_token2022_mint_with_group_pointer_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+    let group_address = Pubkey::new_unique();
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    let mut extensions = MintExtensions::new();
+    let group_pointer_config = GroupPointerConfig {
+        update_authority: Some(payer.pubkey()),
+        group_address,
+    };
+    extensions.add_group_pointer(group_pointer_config);
+
+    //Create mint with defaults
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    //Test mint with defaults creation
+    let mint_acc = banks_client
+        .get_account(mint.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mint_data =
+        StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_acc.data).unwrap();
+    let mint_data_base = mint_data.base;
+    assert_eq!(mint_data_base.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_data_base.decimals, decimals);
+    assert_eq!(mint_acc.owner, spl_token_2022::id());
+
+    let group_pointer_ext = mint_data.get_extension::<GroupPointer>().unwrap();
+    assert_eq!(group_pointer_ext.group_address.0, group_address);
+    assert_eq!(group_pointer_ext.authority.0, payer.pubkey());
 }
 
 #[tokio::test]
