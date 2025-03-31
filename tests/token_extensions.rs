@@ -1,18 +1,16 @@
-use std::thread::park;
-
 use solana_test_framework::*;
 use spl_token_2022::extension::{
     group_member_pointer::GroupMemberPointer, group_pointer::GroupPointer,
     interest_bearing_mint::InterestBearingConfig, metadata_pointer::MetadataPointer,
     mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
-    transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
+    transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
+    StateWithExtensions,
 };
 
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
-use spl_token_group_interface::state::TokenGroupMember;
 use spl_token_metadata_interface::state::TokenMetadata;
 
 mod helpers;
@@ -676,6 +674,52 @@ async fn create_token2022_mint_with_member_account_ext() {
         }
     }
     assert!(group_found);
+}
+
+#[tokio::test]
+async fn create_token2022_mint_with_transfer_hook_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+    let transfer_hook_program_id = Pubkey::new_unique();
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    let mut extensions = MintExtensions::new();
+    extensions.add_transfer_hook(transfer_hook_program_id, Some(payer.pubkey()));
+
+    //Create mint with defaults
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    //Test mint with defaults creation
+    let mint_acc = banks_client
+        .get_account(mint.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mint_data =
+        StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_acc.data).unwrap();
+    let mint_data_base = mint_data.base;
+    assert_eq!(mint_data_base.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_data_base.decimals, decimals);
+    assert_eq!(mint_acc.owner, spl_token_2022::id());
+
+    let transfer_hook_ext = mint_data.get_extension::<TransferHook>().unwrap();
+    assert_eq!(transfer_hook_ext.program_id.0, transfer_hook_program_id);
+    assert_eq!(transfer_hook_ext.authority.0, payer.pubkey());
 }
 
 #[tokio::test]

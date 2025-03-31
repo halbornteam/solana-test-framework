@@ -14,6 +14,7 @@ use spl_token_2022::{
     extension::group_pointer::instruction::initialize as initialize_group_pointer,
     extension::interest_bearing_mint::instruction::initialize as initialize_interest_bearing_mint_config,
     extension::metadata_pointer::instruction::initialize as initialize_metadata_pointer,
+    extension::transfer_hook::instruction::initialize as initialize_transfer_hook,
     extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
     instruction::initialize_mint_close_authority,
     instruction::initialize_non_transferable_mint,
@@ -42,7 +43,7 @@ pub struct MintExtensions {
     group: Option<GroupConfig>,
     member_pointer: Option<MemberPointerConfig>,
     member: Option<MemberConfig>,
-    // transfer_hook
+    transfer_hook: Option<TransferHookConfig>,
     //
     // Introduced in spl-token-2022 v7.0.0 (solana 2.*)
     // pausable
@@ -124,6 +125,11 @@ pub struct MemberConfig {
     pub group_address: Pubkey,
     /// The authority to update the group
     pub group_update_authority: Pubkey,
+}
+
+pub struct TransferHookConfig {
+    pub update_authority: Option<Pubkey>,
+    pub transfer_hook_program_address: Pubkey,
 }
 
 impl MintExtensions {
@@ -275,6 +281,22 @@ impl MintExtensions {
         self
     }
 
+    /// Adds transfer hook extension.
+    ///
+    /// - `tranfer_hook_program_id`: Pubkey of the transfer hook program.
+    /// - `update_authority`: Update authority of the transfer hook extension.
+    pub fn add_transfer_hook<'a>(
+        &'a mut self,
+        tranfer_hook_program_id: Pubkey,
+        update_authority: Option<Pubkey>,
+    ) -> &'a mut MintExtensions {
+        self.transfer_hook = Some(TransferHookConfig {
+            update_authority,
+            transfer_hook_program_address: tranfer_hook_program_id,
+        });
+        self
+    }
+
     /// Calculates mint account data length with all added extensions.
     ///
     /// Fails if any of the extension types has a variable length
@@ -303,6 +325,9 @@ impl MintExtensions {
         }
         if let Some(_) = self.member_pointer {
             extension_types.push(ExtensionType::GroupMemberPointer);
+        }
+        if let Some(_) = self.transfer_hook {
+            extension_types.push(ExtensionType::TransferHook);
         }
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)
     }
@@ -411,6 +436,16 @@ impl MintExtensions {
                 mint,
                 member_pointer_config.update_authority,
                 Some(member_pointer_config.member_address),
+            )?;
+            ixs.push(ix);
+        }
+
+        if let Some(ref transfer_hook_config) = self.transfer_hook {
+            let ix = initialize_transfer_hook(
+                &spl_token_2022::id(),
+                mint,
+                transfer_hook_config.update_authority,
+                Some(transfer_hook_config.transfer_hook_program_address),
             )?;
             ixs.push(ix);
         }
