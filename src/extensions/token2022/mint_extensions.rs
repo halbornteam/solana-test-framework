@@ -19,6 +19,7 @@ use spl_token_2022::{
     instruction::initialize_non_transferable_mint,
     instruction::initialize_permanent_delegate,
 };
+use spl_token_group_interface::{instruction::initialize_member, state::TokenGroupMember};
 use spl_token_group_interface::{
     instruction::{InitializeGroup, TokenGroupInstruction},
     state::TokenGroup,
@@ -28,7 +29,6 @@ use spl_token_metadata_interface::state::TokenMetadata;
 use spl_token_metadata_interface::{
     instruction::initialize as initialize_metadata_account, state::Field,
 };
-
 #[derive(Default)]
 pub struct MintExtensions {
     mint_close_authority: Option<Pubkey>,
@@ -41,7 +41,7 @@ pub struct MintExtensions {
     group_pointer: Option<GroupPointerConfig>,
     group: Option<GroupConfig>,
     member_pointer: Option<MemberPointerConfig>,
-    // member_pointer / member
+    member: Option<MemberConfig>,
     // transfer_hook
     //
     // Introduced in spl-token-2022 v7.0.0 (solana 2.*)
@@ -93,9 +93,9 @@ pub struct TokenMetadataConfig {
 }
 
 pub struct GroupConfig {
-    /// The authority that can sign to update the metadata
+    /// The authority that can sign to update the group
     pub update_authority: Option<Pubkey>,
-    /// The associated mint, used to counter spoofing to be sure that metadata
+    /// The associated mint, used to counter spoofing to be sure that group
     /// belongs to a particular mint
     pub mint: Pubkey,
     /// The associated mint authority
@@ -112,6 +112,18 @@ pub struct GroupPointerConfig {
 pub struct MemberPointerConfig {
     pub update_authority: Option<Pubkey>,
     pub member_address: Pubkey,
+}
+
+pub struct MemberConfig {
+    /// The associated mint, used to counter spoofing to be sure that member
+    /// belongs to a particular mint
+    pub mint: Pubkey,
+    /// The associated mint authority
+    pub mint_authority: Pubkey,
+    /// Address of the group
+    pub group_address: Pubkey,
+    /// The authority to update the group
+    pub group_update_authority: Pubkey,
 }
 
 impl MintExtensions {
@@ -247,6 +259,22 @@ impl MintExtensions {
         self
     }
 
+    /// Adds member account extension. This extension extends the mint account and adds the member directly into the mint.
+    ///
+    /// - `member_config`: Contains information about the member account
+    pub fn add_member_account<'a>(
+        &'a mut self,
+        member_config: MemberConfig,
+    ) -> &'a mut MintExtensions {
+        // Set the member pointer to the mint account itself
+        self.member_pointer = Some(MemberPointerConfig {
+            update_authority: Some(member_config.mint_authority),
+            member_address: member_config.mint,
+        });
+        self.member = Some(member_config);
+        self
+    }
+
     /// Calculates mint account data length with all added extensions.
     ///
     /// Fails if any of the extension types has a variable length
@@ -299,6 +327,12 @@ impl MintExtensions {
             space += std::mem::size_of::<TokenGroup>()
                         + 4 // TokenGroup.size is not u32, but u64, so we need to add 4 more bytes
                         + 4 // TokenGroup.max_size is not u32, but u64, so we need to add 4 more bytes
+                        + 2 // Size of GroupExtension 2 bytes for type
+                        + 2; // 2 bytes for extension length
+        }
+        if let Some(_) = self.member {
+            space += std::mem::size_of::<TokenGroupMember>()
+                        + 4 // TokenGroup.member_number is not u32, but u64, so we need to add 4 more bytes
                         + 2 // Size of GroupExtension 2 bytes for type
                         + 2; // 2 bytes for extension length
         }
@@ -427,6 +461,18 @@ impl MintExtensions {
                 &group_config.mint_authority,
                 group_config.update_authority,
                 group_config.max_size,
+            );
+            ixs.push(ix);
+        }
+
+        if let Some(ref member_config) = self.member {
+            let ix = initialize_member(
+                &spl_token_2022::id(),
+                &member_config.mint,
+                &member_config.mint,
+                &member_config.mint_authority,
+                &member_config.group_address,
+                &member_config.group_update_authority,
             );
             ixs.push(ix);
         }

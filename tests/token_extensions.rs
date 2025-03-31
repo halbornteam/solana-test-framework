@@ -1,3 +1,5 @@
+use std::thread::park;
+
 use solana_test_framework::*;
 use spl_token_2022::extension::{
     group_member_pointer::GroupMemberPointer, group_pointer::GroupPointer,
@@ -523,7 +525,7 @@ async fn create_token2022_mint_with_group_account_ext() {
     // TokenGroup state account layout it cannot be deserialized via `get_extension::<TokenGroup>()`
     // and it would have to be done manually, which is not in scope of this test now
     let mut group_found = false;
-    // Iterate through extensions and find TokenMetadata manually
+    // Iterate through extensions and find TokenGroup manually
     for extension in mint_data.get_extension_types().ok().unwrap() {
         if extension == spl_token_2022::extension::ExtensionType::TokenGroup {
             group_found = true;
@@ -580,6 +582,100 @@ async fn create_token2022_mint_with_member_pointer_ext() {
     let member_pointer_ext = mint_data.get_extension::<GroupMemberPointer>().unwrap();
     assert_eq!(member_pointer_ext.member_address.0, member_address);
     assert_eq!(member_pointer_ext.authority.0, payer.pubkey());
+}
+
+#[tokio::test]
+async fn create_token2022_mint_with_member_account_ext() {
+    let (mut program, _) = helpers::add_program();
+    // It is necessary to use custom token-2022 program version, because the one used by solana-test-program
+    // is outdated and does not have the support for token member extension
+    program.prefer_bpf(true);
+    program.add_program("token_2022", spl_token_2022::id(), None);
+    let payer = helpers::add_payer(&mut program);
+    let mint = Keypair::new();
+    let group_mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+    let max_size = 10;
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    // First create a new mint with group extension
+    let mut group_mint_extensions = MintExtensions::new();
+    let group_config = GroupConfig {
+        update_authority: Some(payer.pubkey()),
+        mint: group_mint.pubkey(),
+        mint_authority: payer.pubkey(),
+        max_size,
+    };
+    group_mint_extensions.add_group_account(group_config);
+    banks_client
+        .create_token2022_mint(
+            &group_mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&group_mint_extensions),
+        )
+        .await
+        .unwrap();
+
+    // Now create a new mint with the member extension. This mint will be a member of the group created above.
+    let mut member_mint_extensions = MintExtensions::new();
+    let member_config = MemberConfig {
+        mint: mint.pubkey(),
+        mint_authority: payer.pubkey(),
+        group_update_authority: payer.pubkey(),
+        group_address: group_mint.pubkey(),
+    };
+    member_mint_extensions.add_member_account(member_config);
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&member_mint_extensions),
+        )
+        .await
+        .unwrap();
+
+    let mint_acc = banks_client
+        .get_account(mint.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mint_data =
+        StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_acc.data).unwrap();
+    let mint_data_base = mint_data.base;
+    assert_eq!(mint_data_base.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_data_base.decimals, decimals);
+    assert_eq!(mint_acc.owner, spl_token_2022::id());
+
+    let member_pointer_ext = mint_data.get_extension::<GroupMemberPointer>().unwrap();
+    assert_eq!(member_pointer_ext.member_address.0, mint.pubkey());
+    assert_eq!(member_pointer_ext.authority.0, payer.pubkey());
+
+    // Comment out due to compatibility issues. Token group interface introduced breaking changes in 0.3.0
+    // https://github.com/solana-labs/solana-program-library/pull/7130
+    // However this version is not compatible with solana-program 1.18 as this introduces other dependencies that have
+    // been yanked. So probably the only way would be to update solana-program to v2.0 which is out of scope now.
+    // let group_ext = mint_data.get_extension::<TokenGroupMember>().unwrap();
+
+    // Only confirm that the member extension was initialized. Due to breaking changes in the
+    // TokenGroupMember state account layout it cannot be deserialized via `get_extension::<TokenTokenGroupMemberoup>()`
+    // and it would have to be done manually, which is not in scope of this test now
+    let mut group_found = false;
+    // Iterate through extensions and find TokenGroupMember manually
+    for extension in mint_data.get_extension_types().ok().unwrap() {
+        if extension == spl_token_2022::extension::ExtensionType::TokenGroupMember {
+            group_found = true;
+        }
+    }
+    assert!(group_found);
 }
 
 #[tokio::test]
