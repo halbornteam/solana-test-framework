@@ -276,7 +276,11 @@ impl MintExtensions {
                 + 4; // Size of MetadataExtension 2 bytes for type, 2 bytes for length
         }
         if let Some(_) = self.group {
-            space += std::mem::size_of::<TokenGroup>() + 8 + 4; // Size of GroupExtension 2 bytes for type, 2 bytes for length
+            space += std::mem::size_of::<TokenGroup>()
+                        + 4 // TokenGroup.size is not u32, but u64, so we need to add 4 more bytes
+                        + 4 // TokenGroup.max_size is not u32, but u64, so we need to add 4 more bytes
+                        + 2 // Size of GroupExtension 2 bytes for type
+                        + 2; // 2 bytes for extension length
         }
         Ok(Rent::default().minimum_balance(space))
     }
