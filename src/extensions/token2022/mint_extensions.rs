@@ -1,5 +1,13 @@
 use solana_sdk::{
-    instruction::Instruction, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
+    instruction::{AccountMeta, Instruction},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    rent::Rent,
+};
+use spl_pod::{
+    bytemuck::pod_bytes_of,
+    optional_keys::OptionalNonZeroPubkey,
+    primitives::{PodU32, PodU64},
 };
 use spl_token_2022::{
     extension::group_pointer::instruction::initialize as initialize_group_pointer,
@@ -9,6 +17,10 @@ use spl_token_2022::{
     instruction::initialize_mint_close_authority,
     instruction::initialize_non_transferable_mint,
     instruction::initialize_permanent_delegate,
+};
+use spl_token_group_interface::{
+    instruction::{InitializeGroup, TokenGroupInstruction},
+    state::TokenGroup,
 };
 use spl_token_metadata_interface::instruction::update_field;
 use spl_token_metadata_interface::state::TokenMetadata;
@@ -26,7 +38,7 @@ pub struct MintExtensions {
     metadata_pointer: Option<TokenMetadataPointerConfig>,
     metadata: Option<TokenMetadataConfig>,
     group_pointer: Option<GroupPointerConfig>,
-    // group_pointer / group
+    group: Option<GroupConfig>,
     // member_pointer / member
     // transfer_hook
     //
@@ -76,6 +88,18 @@ pub struct TokenMetadataConfig {
     /// Any additional metadata about the token as key-value pairs. The program
     /// must avoid storing the same key twice.
     pub additional_metadata: Vec<(String, String)>,
+}
+
+pub struct GroupConfig {
+    /// The authority that can sign to update the metadata
+    pub update_authority: Option<Pubkey>,
+    /// The associated mint, used to counter spoofing to be sure that metadata
+    /// belongs to a particular mint
+    pub mint: Pubkey,
+    /// The associated mint authority
+    pub mint_authority: Pubkey,
+    /// Max size of the group
+    pub max_size: u32,
 }
 
 pub struct GroupPointerConfig {
@@ -174,6 +198,22 @@ impl MintExtensions {
         self
     }
 
+    /// Adds group account extension. This extension extends the mint account and adds the group directly into the mint.
+    ///
+    /// - `group_config`: Contains information about the group account
+    pub fn add_group_account<'a>(
+        &'a mut self,
+        group_config: GroupConfig,
+    ) -> &'a mut MintExtensions {
+        // Set the group pointer to the mint account itself
+        self.group_pointer = Some(GroupPointerConfig {
+            update_authority: group_config.update_authority,
+            group_address: group_config.mint,
+        });
+        self.group = Some(group_config);
+        self
+    }
+
     /// Adds group pointer extension. This extension points to an external group account.
     /// To use the mint as metadata account, use the `add_group_account` method.
     ///
@@ -213,6 +253,9 @@ impl MintExtensions {
         if let Some(_) = self.group_pointer {
             extension_types.push(ExtensionType::GroupPointer);
         }
+        // if let Some(_) = self.group {
+        //     extension_types.push(ExtensionType::TokenGroup);
+        // }
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)
     }
 
@@ -231,6 +274,9 @@ impl MintExtensions {
             }
             .tlv_size_of()?
                 + 4; // Size of MetadataExtension 2 bytes for type, 2 bytes for length
+        }
+        if let Some(_) = self.group {
+            space += std::mem::size_of::<TokenGroup>() + 8 + 4; // Size of GroupExtension 2 bytes for type, 2 bytes for length
         }
         Ok(Rent::default().minimum_balance(space))
     }
@@ -339,6 +385,56 @@ impl MintExtensions {
             ixs.append(&mut custom_metadata_ixs);
         }
 
+        if let Some(ref group_config) = self.group {
+            let ix = Self::initialize_group(
+                &spl_token_2022::id(),
+                &group_config.mint,
+                &group_config.mint,
+                &group_config.mint_authority,
+                group_config.update_authority,
+                group_config.max_size,
+            );
+            ixs.push(ix);
+        }
         Ok(ixs)
+    }
+
+    /// Custom initialize group helper function that solves the incompatibility problem where the
+    /// `max_size` type was changed from u32 to u64 but this is implemented only in token-group-interface v0.3.0
+    /// however this version is not compatible with solana-program 1.18 due to other yanked dependencies
+    fn initialize_group(
+        program_id: &Pubkey,
+        group: &Pubkey,
+        mint: &Pubkey,
+        mint_authority: &Pubkey,
+        update_authority: Option<Pubkey>,
+        max_size: u32,
+    ) -> Instruction {
+        let update_authority = OptionalNonZeroPubkey::try_from(update_authority)
+            .expect("Failed to deserialize `Option<Pubkey>`");
+        let ix_data = TokenGroupInstruction::InitializeGroup(InitializeGroup {
+            update_authority,
+            max_size: max_size.into(),
+        });
+        let mut data = ix_data.pack();
+
+        if let TokenGroupInstruction::InitializeGroup(group) = ix_data {
+            // remove the bytes correspoinding to max_size and add it again as u64
+            let m = group.max_size;
+            let truncate_len = size_of_val(&m);
+            if data.len() >= truncate_len {
+                data.truncate(data.len() - truncate_len);
+                data.extend_from_slice(pod_bytes_of(&PodU64::from(max_size as u64)));
+            }
+        }
+        Instruction {
+            program_id: *program_id,
+            accounts: vec![
+                AccountMeta::new(*group, false),
+                AccountMeta::new_readonly(*mint, false),
+                AccountMeta::new_readonly(*mint_authority, true),
+            ],
+            data,
+        }
     }
 }
