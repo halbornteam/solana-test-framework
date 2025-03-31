@@ -10,6 +10,7 @@ use spl_pod::{
     primitives::{PodU32, PodU64},
 };
 use spl_token_2022::{
+    extension::group_member_pointer::instruction::initialize as initialize_member_pointer,
     extension::group_pointer::instruction::initialize as initialize_group_pointer,
     extension::interest_bearing_mint::instruction::initialize as initialize_interest_bearing_mint_config,
     extension::metadata_pointer::instruction::initialize as initialize_metadata_pointer,
@@ -39,6 +40,7 @@ pub struct MintExtensions {
     metadata: Option<TokenMetadataConfig>,
     group_pointer: Option<GroupPointerConfig>,
     group: Option<GroupConfig>,
+    member_pointer: Option<MemberPointerConfig>,
     // member_pointer / member
     // transfer_hook
     //
@@ -105,6 +107,11 @@ pub struct GroupConfig {
 pub struct GroupPointerConfig {
     pub update_authority: Option<Pubkey>,
     pub group_address: Pubkey,
+}
+
+pub struct MemberPointerConfig {
+    pub update_authority: Option<Pubkey>,
+    pub member_address: Pubkey,
 }
 
 impl MintExtensions {
@@ -215,15 +222,28 @@ impl MintExtensions {
     }
 
     /// Adds group pointer extension. This extension points to an external group account.
-    /// To use the mint as metadata account, use the `add_group_account` method.
+    /// To use the mint as group account, use the `add_group_account` method.
     ///
     /// - `group_pointer_config`: Contains information about the group pointer configuration
     pub fn add_group_pointer<'a>(
         &'a mut self,
         group_pointer_config: GroupPointerConfig,
     ) -> &'a mut MintExtensions {
-        // Set the metadata pointer to the mint account itself
+        // Set the group pointer to the mint account itself
         self.group_pointer = Some(group_pointer_config);
+        self
+    }
+
+    /// Adds member pointer extension. This extension points to an external member account.
+    /// To use the mint as member account, use the `add_member_account` method.
+    ///
+    /// - `member_pointer_config`: Contains information about the member pointer configuration
+    pub fn add_member_pointer<'a>(
+        &'a mut self,
+        member_pointer_config: MemberPointerConfig,
+    ) -> &'a mut MintExtensions {
+        // Set the member pointer to the mint account itself
+        self.member_pointer = Some(member_pointer_config);
         self
     }
 
@@ -253,9 +273,9 @@ impl MintExtensions {
         if let Some(_) = self.group_pointer {
             extension_types.push(ExtensionType::GroupPointer);
         }
-        // if let Some(_) = self.group {
-        //     extension_types.push(ExtensionType::TokenGroup);
-        // }
+        if let Some(_) = self.member_pointer {
+            extension_types.push(ExtensionType::GroupMemberPointer);
+        }
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)
     }
 
@@ -347,6 +367,16 @@ impl MintExtensions {
                 mint,
                 group_pointer_config.update_authority,
                 Some(group_pointer_config.group_address),
+            )?;
+            ixs.push(ix);
+        }
+
+        if let Some(ref member_pointer_config) = self.member_pointer {
+            let ix = initialize_member_pointer(
+                &spl_token_2022::id(),
+                mint,
+                member_pointer_config.update_authority,
+                Some(member_pointer_config.member_address),
             )?;
             ixs.push(ix);
         }

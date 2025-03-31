@@ -1,15 +1,16 @@
 use solana_test_framework::*;
 use spl_token_2022::extension::{
-    group_pointer::GroupPointer, interest_bearing_mint::InterestBearingConfig,
-    metadata_pointer::MetadataPointer, mint_close_authority::MintCloseAuthority,
-    permanent_delegate::PermanentDelegate, transfer_fee::TransferFeeConfig,
-    BaseStateWithExtensions, StateWithExtensions,
+    group_member_pointer::GroupMemberPointer, group_pointer::GroupPointer,
+    interest_bearing_mint::InterestBearingConfig, metadata_pointer::MetadataPointer,
+    mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
+    transfer_fee::TransferFeeConfig, BaseStateWithExtensions, StateWithExtensions,
 };
 
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
+use spl_token_group_interface::state::TokenGroupMember;
 use spl_token_metadata_interface::state::TokenMetadata;
 
 mod helpers;
@@ -529,6 +530,56 @@ async fn create_token2022_mint_with_group_account_ext() {
         }
     }
     assert!(group_found);
+}
+
+#[tokio::test]
+async fn create_token2022_mint_with_member_pointer_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+    let member_address = Pubkey::new_unique();
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    let mut extensions = MintExtensions::new();
+    let member_pointer_config = MemberPointerConfig {
+        update_authority: Some(payer.pubkey()),
+        member_address,
+    };
+    extensions.add_member_pointer(member_pointer_config);
+
+    //Create mint with defaults
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    //Test mint with defaults creation
+    let mint_acc = banks_client
+        .get_account(mint.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mint_data =
+        StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_acc.data).unwrap();
+    let mint_data_base = mint_data.base;
+    assert_eq!(mint_data_base.freeze_authority.unwrap(), freeze_pubkey);
+    assert_eq!(mint_data_base.decimals, decimals);
+    assert_eq!(mint_acc.owner, spl_token_2022::id());
+
+    let member_pointer_ext = mint_data.get_extension::<GroupMemberPointer>().unwrap();
+    assert_eq!(member_pointer_ext.member_address.0, member_address);
+    assert_eq!(member_pointer_ext.authority.0, payer.pubkey());
 }
 
 #[tokio::test]
