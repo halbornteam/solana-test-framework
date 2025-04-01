@@ -30,7 +30,7 @@ use crate::util;
 #[cfg(feature = "pyth")]
 use pyth_sdk_solana::state::SolanaPriceAccount;
 
-use super::mint_extensions::MintExtensions;
+use super::{mint_extensions::MintExtensions, TokenExtensions};
 
 /// Convenience functions for clients
 #[async_trait]
@@ -97,7 +97,7 @@ pub trait ClientExtensions {
         unimplemented!();
     }
 
-    /// Create a new SPL Token Mint account
+    /// Create a new SPL Token2022 Mint account
     async fn create_token2022_mint(
         &mut self,
         _mint: &Keypair,
@@ -117,6 +117,18 @@ pub trait ClientExtensions {
         _authority: &Pubkey,
         _mint: &Pubkey,
         _payer: &Keypair,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        unimplemented!();
+    }
+
+    /// Create a new SPL Token2022 Account
+    async fn create_token2022_account(
+        &mut self,
+        _account: &Keypair,
+        _authority: &Pubkey,
+        _mint: &Pubkey,
+        _payer: &Keypair,
+        _extensions: Option<&TokenExtensions>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         unimplemented!();
     }

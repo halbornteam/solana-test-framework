@@ -1,10 +1,10 @@
 use solana_test_framework::*;
 use spl_token_2022::extension::{
     group_member_pointer::GroupMemberPointer, group_pointer::GroupPointer,
-    interest_bearing_mint::InterestBearingConfig, metadata_pointer::MetadataPointer,
-    mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
-    transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
-    StateWithExtensions,
+    interest_bearing_mint::InterestBearingConfig, memo_transfer::MemoTransfer,
+    metadata_pointer::MetadataPointer, mint_close_authority::MintCloseAuthority,
+    permanent_delegate::PermanentDelegate, transfer_fee::TransferFeeConfig,
+    transfer_hook::TransferHook, BaseStateWithExtensions, StateWithExtensions,
 };
 
 use solana_sdk::{
@@ -797,4 +797,104 @@ async fn create_token2022_mint_with_multiple_ext() {
         transfer_fee_ext.withdraw_withheld_authority.0,
         fee_withdraw_authority
     );
+}
+
+#[tokio::test]
+async fn create_token2022_account_with_no_extensions() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let token_account = Keypair::new();
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    //Create mint with defaults
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            None,
+        )
+        .await
+        .unwrap();
+
+    banks_client
+        .create_token2022_account(
+            &token_account,
+            &payer.pubkey(),
+            &mint.pubkey(),
+            &payer,
+            None,
+        )
+        .await
+        .unwrap();
+
+    let token_account = banks_client
+        .get_account(token_account.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let token_account_data =
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(&token_account.data).unwrap();
+    assert_eq!(token_account_data.base.mint, mint.pubkey());
+    assert_eq!(token_account_data.base.owner, payer.pubkey());
+    assert!(token_account_data.get_tlv_data().is_empty());
+}
+
+#[tokio::test]
+async fn create_token2022_account_with_required_memo_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let token_account = Keypair::new();
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            None,
+        )
+        .await
+        .unwrap();
+
+    let mut extensions = TokenExtensions::new();
+    extensions.add_memo_required_on_transfer();
+
+    banks_client
+        .create_token2022_account(
+            &token_account,
+            &payer.pubkey(),
+            &mint.pubkey(),
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    let token_account = banks_client
+        .get_account(token_account.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let token_account_data =
+        StateWithExtensions::<spl_token_2022::state::Account>::unpack(&token_account.data).unwrap();
+    let token_data_base = token_account_data.base;
+    assert_eq!(token_data_base.mint, mint.pubkey());
+
+    let memo_ext = token_account_data.get_extension::<MemoTransfer>().unwrap();
+    assert_eq!(memo_ext.require_incoming_transfer_memos, true.into());
 }

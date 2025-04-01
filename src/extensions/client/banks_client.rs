@@ -1,3 +1,5 @@
+use crate::TokenExtensions;
+
 use super::*;
 
 #[cfg(feature = "pyth")]
@@ -5,7 +7,9 @@ use pyth_sdk_solana::state::SolanaPriceAccount;
 use solana_sdk::system_instruction;
 use spl_associated_token_account::get_associated_token_address_with_program_id;
 use spl_token_2022::{
-    extension::ExtensionType, instruction::initialize_mint_close_authority, state::Mint,
+    extension::ExtensionType,
+    instruction::initialize_mint_close_authority,
+    state::{Account, Mint},
 };
 
 #[async_trait]
@@ -128,6 +132,18 @@ impl ClientExtensions for BanksClient {
         .map_err(Into::into)
     }
 
+    /// Creates new Token 2022 mint. Optinally initializes token extensions passed via the `extensions` parameter.
+    ///
+    /// Mint extensions currently include:
+    /// - confidential transfers (curently not supported)
+    /// - transfer fees
+    /// - closing mint
+    /// - interest-bearing tokens
+    /// - non-transferable tokens
+    /// - permanent delegate
+    /// - transfer hook
+    /// - metadata pointer
+    /// - metadata
     async fn create_token2022_mint(
         &mut self,
         mint: &Keypair,
@@ -137,16 +153,6 @@ impl ClientExtensions for BanksClient {
         payer: &Keypair,
         extensions: Option<&MintExtensions>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Mint extensions currently include:
-        // - confidential transfers
-        // - transfer fees
-        // - closing mint
-        // - interest-bearing tokens
-        // - non-transferable tokens
-        // - permanent delegate
-        // - transfer hook
-        // - metadata pointer
-        // - metadata
         //
         // Account extensions currently include:
         // - memo required on incoming transfers
@@ -235,6 +241,62 @@ impl ClientExtensions for BanksClient {
             &[ix],
             Some(&payer.pubkey()),
             &[payer],
+            latest_blockhash,
+        ))
+        .await
+        .map_err(Into::into)
+    }
+
+    async fn create_token2022_account(
+        &mut self,
+        account: &Keypair,
+        authority: &Pubkey,
+        mint: &Pubkey,
+        payer: &Keypair,
+        extensions: Option<&TokenExtensions>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let (space, mut pre_ext_ixs, mut post_ext_ixs, rent_required) =
+            if let Some(extensions) = extensions {
+                (
+                    extensions.try_calculate_token_account_length()?,
+                    extensions.get_ixs_pre_token_init(&account.pubkey(), authority, &vec![])?,
+                    extensions.get_ixs_post_token_init(&account.pubkey(), authority, &vec![])?,
+                    extensions.get_minimal_balance_for_rent()?,
+                )
+            } else {
+                let space = ExtensionType::try_calculate_account_len::<Account>(&[])?;
+                (
+                    space,
+                    vec![],
+                    vec![],
+                    Rent::default().minimum_balance(space),
+                )
+            };
+        let latest_blockhash = self.get_latest_blockhash().await?;
+        let create_ix = system_instruction::create_account(
+            &payer.pubkey(),
+            &account.pubkey(),
+            rent_required,
+            space as u64,
+            &spl_token_2022::id(),
+        );
+        let initialize_account_ix = spl_token_2022::instruction::initialize_account(
+            &spl_token_2022::id(),
+            &account.pubkey(),
+            mint,
+            authority,
+        )
+        .unwrap();
+
+        let mut ixs = vec![create_ix];
+        ixs.append(&mut pre_ext_ixs);
+        ixs.push(initialize_account_ix);
+        ixs.append(&mut post_ext_ixs);
+
+        self.process_transaction(Transaction::new_signed_with_payer(
+            &ixs,
+            Some(&payer.pubkey()),
+            &[payer, account],
             latest_blockhash,
         ))
         .await
