@@ -2,7 +2,8 @@ use solana_sdk::{
     instruction::Instruction, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
 };
 use spl_token_2022::{
-    extension::memo_transfer::instruction::enable_required_transfer_memos, extension::ExtensionType,
+    extension::memo_transfer::instruction::enable_required_transfer_memos,
+    extension::ExtensionType, instruction::initialize_immutable_owner,
 };
 
 #[derive(Default)]
@@ -37,6 +38,10 @@ impl TokenExtensions {
             extension_types.push(ExtensionType::MemoTransfer);
         }
 
+        if self.immutable_owner {
+            extension_types.push(ExtensionType::ImmutableOwner);
+        }
+
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(&extension_types)
     }
 
@@ -50,11 +55,15 @@ impl TokenExtensions {
     /// These instructions must be invoked before the token account initialization.
     pub fn get_ixs_pre_token_init(
         &self,
-        _token_account: &Pubkey,
+        token_account: &Pubkey,
         _owner: &Pubkey,
         _signers: &[&Pubkey],
     ) -> Result<Vec<Instruction>, ProgramError> {
-        let ixs = Vec::new();
+        let mut ixs = Vec::new();
+        if self.immutable_owner {
+            let ix = initialize_immutable_owner(&spl_token_2022::id(), token_account)?;
+            ixs.push(ix);
+        }
         Ok(ixs)
     }
     /// Returns vector in instructions to be invoked after the token account is created
