@@ -2,6 +2,7 @@ use solana_sdk::{
     instruction::Instruction, program_error::ProgramError, pubkey::Pubkey, rent::Rent,
 };
 use spl_token_2022::{
+    extension::cpi_guard::instruction::enable_cpi_guard,
     extension::memo_transfer::instruction::enable_required_transfer_memos,
     extension::ExtensionType, instruction::initialize_immutable_owner,
 };
@@ -10,6 +11,7 @@ use spl_token_2022::{
 pub struct TokenExtensions {
     memo_enabled: bool,
     immutable_owner: bool,
+    cpi_guard: bool,
 }
 
 impl TokenExtensions {
@@ -29,6 +31,12 @@ impl TokenExtensions {
         self
     }
 
+    /// Enables the cpi guard extension.
+    pub fn add_enable_cpi_guard<'a>(&'a mut self) -> &'a mut TokenExtensions {
+        self.cpi_guard = true;
+        self
+    }
+
     /// Calculates mint account data length with all added extensions.
     ///
     /// Fails if any of the extension types has a variable length
@@ -40,6 +48,10 @@ impl TokenExtensions {
 
         if self.immutable_owner {
             extension_types.push(ExtensionType::ImmutableOwner);
+        }
+
+        if self.cpi_guard {
+            extension_types.push(ExtensionType::CpiGuard);
         }
 
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Account>(&extension_types)
@@ -82,6 +94,11 @@ impl TokenExtensions {
                 owner,
                 signers,
             )?;
+            ixs.push(ix);
+        }
+
+        if self.cpi_guard {
+            let ix = enable_cpi_guard(&spl_token_2022::id(), token_account, owner, signers)?;
             ixs.push(ix);
         }
         Ok(ixs)

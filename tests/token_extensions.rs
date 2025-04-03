@@ -5,7 +5,7 @@ use spl_token_2022::extension::{
     memo_transfer::MemoTransfer, metadata_pointer::MetadataPointer,
     mint_close_authority::MintCloseAuthority, permanent_delegate::PermanentDelegate,
     transfer_fee::TransferFeeConfig, transfer_hook::TransferHook, BaseStateWithExtensions,
-    StateWithExtensions,
+    StateWithExtensions, StateWithExtensionsMut,
 };
 
 use solana_sdk::{
@@ -951,4 +951,58 @@ async fn create_token2022_account_with_immutable_owner_ext() {
     let _ = token_account_data
         .get_extension::<ImmutableOwner>()
         .unwrap();
+}
+
+#[tokio::test]
+async fn create_token2022_account_with_cpi_guard_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let token_account = Keypair::new();
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            None,
+        )
+        .await
+        .unwrap();
+
+    let mut extensions = TokenExtensions::new();
+    extensions.add_enable_cpi_guard();
+
+    banks_client
+        .create_token2022_account(
+            &token_account,
+            &payer.pubkey(),
+            &mint.pubkey(),
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    let mut token_account = banks_client
+        .get_account(token_account.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let token_account_data =
+        StateWithExtensionsMut::<spl_token_2022::state::Account>::unpack(&mut token_account.data)
+            .unwrap();
+    let token_data_base = token_account_data.base;
+    assert_eq!(token_data_base.mint, mint.pubkey());
+
+    assert!(spl_token_2022::extension::cpi_guard::cpi_guard_enabled(
+        &token_account_data
+    ));
 }
