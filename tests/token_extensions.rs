@@ -1076,3 +1076,69 @@ async fn create_token2022_account_with_default_account_state_ext() {
     let token_data_base = token_account_data.base;
     assert_eq!(token_data_base.state, AccountState::Frozen);
 }
+
+#[tokio::test]
+async fn create_token2022_account_with_multiple_ext() {
+    let (mut program, _) = helpers::add_program();
+    let payer = helpers::add_payer(&mut program);
+    let token_account = Keypair::new();
+    let mint = Keypair::new();
+    let freeze_pubkey = Pubkey::new_unique();
+    let decimals = 0;
+
+    let (mut banks_client, _payer_keypair, mut _recent_blockhash) = program.start().await;
+
+    banks_client
+        .create_token2022_mint(
+            &mint,
+            &payer.pubkey(),
+            Some(&freeze_pubkey),
+            decimals,
+            &payer,
+            None,
+        )
+        .await
+        .unwrap();
+
+    let mut extensions = TokenExtensions::new();
+    extensions.add_enable_cpi_guard();
+    extensions.add_immutable_owner();
+    extensions.add_memo_required_on_transfer();
+
+    banks_client
+        .create_token2022_account(
+            &token_account,
+            &payer.pubkey(),
+            &mint.pubkey(),
+            &payer,
+            Some(&extensions),
+        )
+        .await
+        .unwrap();
+
+    let mut token_account = banks_client
+        .get_account(token_account.pubkey())
+        .await
+        .unwrap()
+        .unwrap();
+
+    let token_account_data =
+        StateWithExtensionsMut::<spl_token_2022::state::Account>::unpack(&mut token_account.data)
+            .unwrap();
+    let token_data_base = token_account_data.base;
+    assert_eq!(token_data_base.mint, mint.pubkey());
+
+    // Cpi guard ext
+    assert!(spl_token_2022::extension::cpi_guard::cpi_guard_enabled(
+        &token_account_data
+    ));
+
+    // Immutable owner ext
+    let _ = token_account_data
+        .get_extension::<ImmutableOwner>()
+        .unwrap();
+
+    // Memo ext
+    let memo_ext = token_account_data.get_extension::<MemoTransfer>().unwrap();
+    assert_eq!(memo_ext.require_incoming_transfer_memos, true.into());
+}
