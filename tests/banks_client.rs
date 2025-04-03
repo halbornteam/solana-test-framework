@@ -1,8 +1,4 @@
 use solana_test_framework::*;
-use spl_token_2022::extension::{
-    mint_close_authority::MintCloseAuthority, transfer_fee::TransferFeeConfig,
-    BaseStateWithExtensions, StateWithExtensions,
-};
 
 use {
     solana_sdk::{

@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use solana_program::pubkey::Pubkey;
 use solana_program_test::{ProgramTestContext, ProgramTestError};
-use solana_sdk::{account::AccountSharedData, sysvar::clock::Clock};
+use solana_sdk::sysvar::clock::Clock;
 
 #[cfg(feature = "pyth")]
 use {

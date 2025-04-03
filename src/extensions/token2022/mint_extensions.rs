@@ -4,12 +4,9 @@ use solana_sdk::{
     pubkey::Pubkey,
     rent::Rent,
 };
-use spl_pod::{
-    bytemuck::pod_bytes_of,
-    optional_keys::OptionalNonZeroPubkey,
-    primitives::{PodU32, PodU64},
-};
+use spl_pod::{bytemuck::pod_bytes_of, optional_keys::OptionalNonZeroPubkey, primitives::PodU64};
 use spl_token_2022::{
+    extension::default_account_state::instruction::initialize_default_account_state,
     extension::group_member_pointer::instruction::initialize as initialize_member_pointer,
     extension::group_pointer::instruction::initialize as initialize_group_pointer,
     extension::interest_bearing_mint::instruction::initialize as initialize_interest_bearing_mint_config,
@@ -19,6 +16,7 @@ use spl_token_2022::{
     instruction::initialize_mint_close_authority,
     instruction::initialize_non_transferable_mint,
     instruction::initialize_permanent_delegate,
+    state::AccountState,
 };
 use spl_token_group_interface::{instruction::initialize_member, state::TokenGroupMember};
 use spl_token_group_interface::{
@@ -44,6 +42,7 @@ pub struct MintExtensions {
     member_pointer: Option<MemberPointerConfig>,
     member: Option<MemberConfig>,
     transfer_hook: Option<TransferHookConfig>,
+    default_account_state: Option<AccountState>,
     //
     // Introduced in spl-token-2022 v7.0.0 (solana 2.*)
     // pausable
@@ -297,6 +296,17 @@ impl MintExtensions {
         self
     }
 
+    /// Adds default account state extension.
+    ///
+    /// `default_state`: Token account state to be set after creation.
+    pub fn add_default_account_state<'a>(
+        &'a mut self,
+        default_state: AccountState,
+    ) -> &'a mut MintExtensions {
+        self.default_account_state = Some(default_state);
+        self
+    }
+
     /// Calculates mint account data length with all added extensions.
     ///
     /// Fails if any of the extension types has a variable length
@@ -328,6 +338,9 @@ impl MintExtensions {
         }
         if let Some(_) = self.transfer_hook {
             extension_types.push(ExtensionType::TransferHook);
+        }
+        if let Some(_) = self.default_account_state {
+            extension_types.push(ExtensionType::DefaultAccountState);
         }
         ExtensionType::try_calculate_account_len::<spl_token_2022::state::Mint>(&extension_types)
     }
@@ -447,6 +460,11 @@ impl MintExtensions {
                 transfer_hook_config.update_authority,
                 Some(transfer_hook_config.transfer_hook_program_address),
             )?;
+            ixs.push(ix);
+        }
+
+        if let Some(default_state) = self.default_account_state {
+            let ix = initialize_default_account_state(&spl_token_2022::id(), mint, &default_state)?;
             ixs.push(ix);
         }
 
