@@ -6,6 +6,7 @@
 &nbsp;
 
 ## Setup
+
 This framework supports:
 
 - Solana v1.9 and Anchor v0.24.2
@@ -17,25 +18,25 @@ This framework supports:
 - Solana v1.16 and Anchor v0.28.0
 - Solana v1.18 and Anchor v0.30.0
 
-
 To use it in your project,
 
 1. add one of the following in your `Cargo.toml`:
- 
-    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.9"}`
-    - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.10" }`
-    - Solana ~1.11: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.11" }`
-    - Solana ~1.12: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.12" }`
-    - Solana ~1.13: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.13" }`
-    - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.14" }`
-     - Solana ~1.16: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.16" }`
-    - Solana ~1.18: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.18" }`
+
+   - Solana ~1.9: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.9"}`
+   - Solana ~1.10: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.10" }`
+   - Solana ~1.11: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.11" }`
+   - Solana ~1.12: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.12" }`
+   - Solana ~1.13: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.13" }`
+   - Solana ~1.14: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.14" }`
+   - Solana ~1.16: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.16" }`
+   - Solana ~1.18: `solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.18" }`
 
 2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
 
 &nbsp;
 
 ## Docs
+
 ### [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html) and [`RpcClient`](https://docs.rs/solana-client/latest/solana_client/rpc_client/struct.RpcClient.html) extensions
 
 Assemble the given instructions into a transaction and sign it.
@@ -107,6 +108,22 @@ async fn create_token_mint(
 
 &nbsp;
 
+Create a new SPL Token 2022 [`Mint`](https://docs.rs/spl-token-2022/latest/spl_token_2022/state/struct.Mint.html) account.
+
+```rust
+async fn create_token2022_mint(
+    &mut self,
+    mint: &Keypair,
+    authority: &Pubkey,
+    freeze_authority: Option<&Pubkey>,
+    decimals: u8,
+    payer: &Keypair,
+    extensions: Option<&MintExtensions>,
+) -> Result<(), Box<dyn std::error::Error>>
+```
+
+&nbsp;
+
 Create a new SPL Token [`Account`](https://docs.rs/spl-token/latest/spl_token/state/struct.Account.html).
 
 ```rust
@@ -116,6 +133,21 @@ async fn create_token_account(
     authority: &Pubkey,
     mint: &Pubkey,
     payer: &Keypair
+) -> Result<(), Box<dyn std::error::Error>>
+```
+
+&nbsp;
+
+Create a new SPL Token 2022 [`Account`](https://docs.rs/spl-token-2022/latest/spl_token_2022/state/struct.Account.html).
+
+```rust
+async fn create_token2022_account(
+    &mut self,
+    account: &Keypair,
+    authority: &Pubkey,
+    mint: &Pubkey,
+    payer: &Keypair,
+    extensions: Option<&TokenExtensions>,
 ) -> Result<(), Box<dyn std::error::Error>>
 ```
 
@@ -192,6 +224,7 @@ pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discrimin
 ```
 
 Add an empty [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/attr.account.html) account to the test environment with a specified data size. Note the total size of the accounts data is 8 (discriminator) + size.
+
 ```rust
 #[cfg(feature = "anchor")]
 pub fn add_empty_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
@@ -204,6 +237,7 @@ pub fn add_empty_account_with_anchor<T: AccountSerialize + AnchorSerialize + Dis
 local_env_builder.add_empty_account_with_anchor::<HelloCounter>(user_pubkey, program::id(), 32);
 
 ```
+
 &nbsp;
 
 Add an account with the given balance to the test environment.
@@ -323,6 +357,7 @@ fn add_bpf_program(
 Adds BPF program to the test environment.
 The program is upgradeable if `Some` `program_authority` with the `program data` provided.
 This is useful for those programs which the program data has to be a spefic one, if not, use add_bpf_program
+
 ```rust
 fn add_bpf_program_with_program_data(
     &mut self,
@@ -333,6 +368,7 @@ fn add_bpf_program_with_program_data(
     process_instruction: Option<ProcessInstructionWithContext>,
 )
 ```
+
 &nbsp;
 
 ### [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
